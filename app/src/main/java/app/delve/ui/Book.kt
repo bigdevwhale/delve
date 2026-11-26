@@ -80,6 +80,8 @@ fun BestiaryScreen(c: AppContainer) {
             }
             Gap(30.dp)
         }
+        HelpButton(c, "beasts", Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp))
+        PageHint(c, "beasts")
         open?.let { b ->
             val l = s.lore[b.id]
             val met = (l?.met ?: 0) > 0
@@ -109,6 +111,7 @@ fun ChronicleScreen(c: AppContainer) {
     val s = c.state ?: return
     val ru = ru()
     remember(v) { 0 }
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding().padding(horizontal = 16.dp)) {
         Heading(w(ru, "все вылазки", "every expedition"), w(ru, "Летопись", "Chronicle"))
         Card(Modifier.fillMaxWidth()) {
@@ -138,6 +141,9 @@ fun ChronicleScreen(c: AppContainer) {
             }
         }
         Gap(30.dp)
+    }
+    HelpButton(c, "chronicle", Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp))
+    PageHint(c, "chronicle")
     }
 }
 

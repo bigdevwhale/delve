@@ -125,7 +125,9 @@ fun HeroScreen(c: AppContainer) {
             }
             Gap(30.dp)
         }
+        HelpButton(c, "hero", Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp))
         pick?.let { uid -> s.gear.firstOrNull { it.uid == uid }?.let { ItemSheet(c, it, ru) { pick = null } } ?: run { pick = null } }
+        PageHint(c, "hero")
     }
 }
 

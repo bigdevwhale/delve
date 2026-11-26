@@ -170,6 +170,8 @@ class GameState(
     var torchPick = 30
     var vibrate = true
     var tutorial = 0
+    /** Pages whose first-visit hint was read. */
+    val hints = HashSet<String>()
 
     fun level(b: String) = buildings[b] ?: 0
     fun has(s: String) = (stuff[s] ?: 0) > 0
@@ -182,7 +184,7 @@ class GameState(
         .put("lore", JSONObject().also { o -> lore.forEach { (k, v) -> o.put(k, v.toJson()) } })
         .put("pet", companion).put("deep", deepest).put("m", metres).put("logs", JSONArray(logs.map { it.toJson() }))
         .put("run", run?.toJson()).put("home", home?.let { JSONArray(listOf(it.lat, it.lon)) }).put("box", box?.let { JSONArray(it.toList()) })
-        .put("uid", nextUid).put("tp", torchPick).put("vib", vibrate).put("tut", tutorial)
+        .put("uid", nextUid).put("tp", torchPick).put("vib", vibrate).put("tut", tutorial).put("hints", JSONArray(hints.toList()))
 
     companion object {
         fun fromJson(o: JSONObject) = GameState(o.getString("name"), o.getString("cls"), o.optBoolean("f")).also { s ->
@@ -200,6 +202,7 @@ class GameState(
             s.home = o.optJSONArray("home")?.let { Geo(it.getDouble(0), it.getDouble(1)) }
             s.box = o.optJSONArray("box")?.let { a -> DoubleArray(4) { a.getDouble(it) } }
             s.nextUid = o.optLong("uid", 1); s.torchPick = o.optInt("tp", 30); s.vibrate = o.optBoolean("vib", true); s.tutorial = o.optInt("tut")
+            o.optJSONArray("hints")?.let { a -> for (i in 0 until a.length()) s.hints += a.getString(i) }
         }
     }
 }

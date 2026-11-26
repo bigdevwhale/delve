@@ -205,6 +205,7 @@ fun DungeonScreen(c: AppContainer, onBag: () -> Unit) {
             }
         }
 
+        HelpButton(c, "dungeon", Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 198.dp, end = 24.dp))
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(12.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                 Canvas(Modifier.size(130.dp, 34.dp)) { drawIntoCanvas { ink.scale(it.nativeCanvas, 8 * density, size.height - 10 * density, zoom * density, ru) } }
@@ -232,6 +233,7 @@ fun DungeonScreen(c: AppContainer, onBag: () -> Unit) {
                 ToolBtn(w(ru, "Карта", "Map"), 26, c.game.count(s, "mapscroll"), Modifier.weight(1f), enabled = !run.mapped && c.game.count(s, "mapscroll") > 0) { c.readMap() }
             }
         }
+        PageHint(c, "dungeon")
     }
 }
 

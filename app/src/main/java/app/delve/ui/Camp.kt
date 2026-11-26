@@ -68,6 +68,8 @@ fun CampScreen(c: AppContainer, onSettings: () -> Unit) {
                 Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, C.paper))))
                 Row(Modifier.statusBarsPadding().padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(w(ru, "Лагерь", "Camp"), style = T.Display.copy(color = C.floor), modifier = Modifier.weight(1f))
+                    HelpButton(c, "camp", dark = true)
+                    HGap(8.dp)
                     Box(Modifier.size(42.dp).clip(CircleShape).background(C.ink.copy(alpha = .7f)).clickable { onSettings() }, contentAlignment = Alignment.Center) {
                         Text("⚙", style = T.Title.copy(color = C.paper))
                     }
@@ -156,6 +158,7 @@ fun CampScreen(c: AppContainer, onSettings: () -> Unit) {
             }
         }
         open?.let { BuildingSheet(c, it, ru) { open = null } }
+        PageHint(c, "camp")
     }
 }
 

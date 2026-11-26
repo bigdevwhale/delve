@@ -295,6 +295,8 @@ class AppContainer(context: Context) {
     fun brew(r: Recipe) { state?.let { game.brew(it, r) }; changed() }
     fun learn(id: String) { state?.let { game.learn(it, id) }; changed() }
     fun pet(id: String?) { state?.companion = id; changed() }
+    fun hintSeen(key: String) { state?.hints?.add(key); changed() }
+    fun hintAgain(key: String) { state?.hints?.remove(key); changed() }
     fun setVibrate(on: Boolean) { state?.vibrate = on; changed() }
 
     fun refreshWeather() {
