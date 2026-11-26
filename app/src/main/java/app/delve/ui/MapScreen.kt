@@ -227,6 +227,13 @@ fun DungeonScreen(c: AppContainer, onBag: () -> Unit) {
                 }
             }
             Gap(8.dp)
+            val riding by c.riding.collectAsState()
+            if (riding) {
+                Text(w(ru, "Слишком быстро: подземелье ждёт пешехода. Транспорт не считается.", "Too fast: the dungeon waits for someone on foot. Rides don't count."),
+                    style = T.Small.copy(color = C.paper), textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(C.ink.copy(alpha = .85f)).padding(8.dp))
+                Gap(6.dp)
+            }
             val ch = run.chase
             if (ch != null) ChaseCard(c, ch.beast, ch.left, ch.total, ru)
             else RoomCard(c, f, run, ru, v)

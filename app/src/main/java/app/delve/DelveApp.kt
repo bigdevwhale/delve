@@ -2,6 +2,7 @@ package app.delve
 
 import android.app.Application
 import android.content.Context
+import app.delve.data.DemoSeed
 import app.delve.data.District
 import app.delve.data.Store
 import app.delve.data.Tiles
@@ -14,6 +15,8 @@ import app.delve.domain.Game
 import app.delve.domain.GameState
 import app.delve.domain.Geo
 import app.delve.domain.Graph
+import app.delve.domain.Fix
+import app.delve.domain.Track
 import app.delve.domain.Item
 import app.delve.domain.Battle
 import app.delve.domain.Move
@@ -65,8 +68,10 @@ class AppContainer(context: Context) {
     val stage = MutableStateFlow("")
     @Volatile var visible = false
 
-    private var lastFix: Geo? = null
-    private var lastFixAt = 0L
+    /** Cleans raw positions (ported from Fogwalk). */
+    private val track = Track()
+    /** True while the phone moves faster than a walker: the dungeon waits. */
+    val riding = MutableStateFlow(false)
     private var warned = 0
 
     fun changed() {
@@ -116,6 +121,16 @@ class AppContainer(context: Context) {
     /** Downloads the district around a point (the camp, or wherever an expedition starts far from it). */
     suspend fun mapAround(at: Geo) {
         val s = state ?: return
+        if (BuildConfig.DEMO) {
+            // the demo has no GPS and no download: the camp stands on Petrogradka, the map comes with the APK
+            val json = DemoSeed.json(this) ?: return
+            store.saveDistrict(json)
+            s.home = DemoSeed.HOME; s.box = DemoSeed.BOX
+            here.value = DemoSeed.HOME
+            loadDistrict()
+            changed()
+            return
+        }
         val box = District.box(at.lat, at.lon, DISTRICT_HALF)
         stage.value = "download"
         val tiles = try { withContext(Dispatchers.IO) { Tiles.download(box) } } catch (e: Exception) { stage.value = ""; throw e }
@@ -153,7 +168,7 @@ class AppContainer(context: Context) {
             run.at = n.id; run.visited += n.id; run.seen += n.id
             conditions().let { run.night = it.night; run.rain = it.rain }
             floor()?.let { f -> game.look(s, f, x, y) }
-            lastFix = at; lastFixAt = System.currentTimeMillis(); warned = 0
+            warned = 0
             run.trail += at.lat; run.trail += at.lon
         }
         WalkService.start(app)
@@ -204,25 +219,29 @@ class AppContainer(context: Context) {
     /** The map showed the oldest toast long enough. */
     fun toastDone(e: Ev) { toasts.value = toasts.value.filter { it !== e } }
 
-    /** A new position: walking, the chase, rooms entered, the lantern's reach. */
+    /**
+     * A raw position from the phone. It goes through the same filter as Fogwalk's walks first: network positions only
+     * place the dot, lone jumps are dropped, standing still adds nothing, and a ride (a tram, a bike) neither wears
+     * a chaser out nor walks into halls.
+     */
     @Synchronized
-    fun fix(at: Geo, accuracy: Float) {
+    fun fix(raw: Fix) {
+        val step = track.add(raw)
+        if (step == null) {
+            if (!raw.gps && !track.hasGps(raw.time)) here.value = Geo(raw.lat, raw.lon)
+            return
+        }
+        val at = Geo(step.lat, step.lon)
         here.value = at
+        riding.value = step.fast
         val s = state ?: return
         val run = s.run ?: return
-        if (accuracy > 40f) return
         val f = floor() ?: return
         val d = district ?: return
         val out = ArrayList<Ev>()
         val t = System.currentTimeMillis()
-        lastFix?.let { prev ->
-            val m = prev.metres(at)
-            val secs = (t - lastFixAt) / 1000.0
-            if (m in 2.0..250.0 && (secs <= 0 || m / secs < 4.5)) {
-                game.walked(s, m, out)
-            }
-        }
-        lastFix = at; lastFixAt = t
+        if (step.fast) { changed(); return }
+        if (step.meters > 0) game.walked(s, step.meters, out)
         val x = d.x(at.lon); val y = d.y(at.lat)
         if (run.steps.size < 2 || hypot(run.steps[run.steps.size - 2] - x, run.steps[run.steps.size - 1] - y) * d.mpp > 6) { run.steps += x; run.steps += y }
         val tr = run.trail
@@ -392,8 +411,7 @@ class AppContainer(context: Context) {
                 val n = maxOf(1, (prev.metres(to) / 8).toInt())
                 for (i in 1..n) {
                     val k = i.toDouble() / n
-                    lastFixAt = System.currentTimeMillis() - 4000
-                    fix(Geo(prev.lat + (to.lat - prev.lat) * k, prev.lon + (to.lon - prev.lon) * k), 5f)
+                    fix(Fix(prev.lat + (to.lat - prev.lat) * k, prev.lon + (to.lon - prev.lon) * k, 5f, System.currentTimeMillis(), simulated = true))
                     kotlinx.coroutines.delay(40)
                 }
                 prev = to
@@ -424,12 +442,12 @@ class DelveApp : Application() {
         container = AppContainer(this)
         container.scope.launch {
             runCatching {
-                if (BuildConfig.DEMO) app.delve.data.DemoSeed.seedIfEmpty(container) else container.loadDistrict()
+                if (BuildConfig.DEMO) DemoSeed.seedIfEmpty(container, BuildConfig.SHOTS) else container.loadDistrict()
             }.onFailure { android.util.Log.e("Delve", "district", it) }
             if (BuildConfig.DEMO && container.here.value == null) {
                 // the demo has no GPS: the hero stands in the room they last entered
                 val run = container.state?.run; val d = container.district; val g = container.graph
-                container.here.value = if (run != null && d != null && g != null && run.at in g.nodes.indices) g.nodes[run.at].let { app.delve.domain.Geo(d.lat(it.y), d.lon(it.x)) } else container.state?.home
+                container.here.value = if (run != null && d != null && g != null && run.at in g.nodes.indices) g.nodes[run.at].let { app.delve.domain.Geo(d.lat(it.y), d.lon(it.x)) } else container.state?.home ?: DemoSeed.HOME
             }
             if (container.state?.run != null && !BuildConfig.DEMO) WalkService.start(this@DelveApp)
             container.version.value++

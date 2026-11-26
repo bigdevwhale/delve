@@ -131,7 +131,7 @@ fun Rule(modifier: Modifier = Modifier, color: Color = C.ink) {
     })
 }
 
-enum class BtnKind { INK, LINE, WAX, GOLD }
+enum class BtnKind { INK, LINE, WAX, GOLD, GHOST }
 
 @Composable
 fun Btn(text: String, modifier: Modifier = Modifier, kind: BtnKind = BtnKind.INK, enabled: Boolean = true, sub: String? = null, onClick: () -> Unit) {
@@ -140,6 +140,7 @@ fun Btn(text: String, modifier: Modifier = Modifier, kind: BtnKind = BtnKind.INK
         BtnKind.LINE -> Triple(Color.Transparent, C.ink, C.ink)
         BtnKind.WAX -> Triple(C.red, C.floor, C.redDeep)
         BtnKind.GOLD -> Triple(C.gold, C.ink, C.ink)
+        BtnKind.GHOST -> Triple(Color.Transparent, C.paper, C.paper.copy(alpha = .5f))
     }
     val a = if (enabled) 1f else .38f
     Column(

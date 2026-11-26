@@ -20,10 +20,16 @@ object DemoSeed {
     /** The box of the bundled Overpass dump. */
     val BOX = doubleArrayOf(59.9455, 30.3040, 59.9585, 30.3260)
 
-    fun seedIfEmpty(c: AppContainer) {
-        if (c.state != null) { c.loadDistrict(); return }
-        val json = runCatching { c.app.assets.open("demo/petrogradka.osm.json").bufferedReader().use { it.readText() } }.getOrNull() ?: return
-        seed(c, json)
+    /** The bundled district of the demo: Petrogradka, an Overpass dump in the APK. */
+    fun json(c: AppContainer): String? = runCatching { c.app.assets.open("demo/petrogradka.osm.json").bufferedReader().use { it.readText() } }.getOrNull()
+
+    /**
+     * The demo starts empty, through the real first screens; only the screenshot build (-Pshots) gets a
+     * hero a dozen expeditions in.
+     */
+    fun seedIfEmpty(c: AppContainer, played: Boolean) {
+        if (c.state != null || !played) { c.loadDistrict(); return }
+        seed(c, json(c) ?: return)
     }
 
     fun seed(c: AppContainer, json: String, ru: Boolean = true) {

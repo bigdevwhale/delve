@@ -27,7 +27,7 @@ import app.delve.BuildConfig
 import app.delve.MainActivity
 import app.delve.R
 import app.delve.container
-import app.delve.domain.Geo
+import app.delve.domain.Fix
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /** Listens to the GPS while the app is open or an expedition is on, and feeds every fix to the game. */
@@ -44,11 +44,14 @@ class Tracker(private val context: Context) : LocationListener {
         owners += owner
         if (!allowed || listening) return
         listening = true
-        for (p in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
-            if (runCatching { lm.isProviderEnabled(p) }.getOrDefault(false)) {
-                runCatching { lm.requestLocationUpdates(p, 3000L, 3f, this, Looper.getMainLooper()) }
-                runCatching { lm.getLastKnownLocation(p) }.getOrNull()?.let { onLocationChanged(it) }
-            }
+        // as in Fogwalk: satellites every second; network positions only place the dot until they answer
+        runCatching {
+            val providers = lm.getProviders(false)
+            if (LocationManager.GPS_PROVIDER in providers) lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, this, Looper.getMainLooper())
+            if (LocationManager.NETWORK_PROVIDER in providers) lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000L, 0f, this, Looper.getMainLooper())
+            lm.getProviders(true).mapNotNull { lm.getLastKnownLocation(it) }
+                .filter { System.currentTimeMillis() - it.time < 10 * 60_000L }
+                .minByOrNull { it.accuracy }?.let { onLocationChanged(it) }
         }
     }
 
@@ -61,7 +64,11 @@ class Tracker(private val context: Context) : LocationListener {
     override fun onLocationChanged(l: Location) {
         // the demo lives on Petrogradka: a long press on the map walks the hero instead
         if (BuildConfig.DEMO) return
-        context.container.fix(Geo(l.latitude, l.longitude), if (l.hasAccuracy()) l.accuracy else 30f)
+        context.container.fix(Fix(
+            lat = l.latitude, lon = l.longitude, accuracy = if (l.hasAccuracy()) l.accuracy else 50f, time = l.time,
+            bearing = if (l.hasBearing()) l.bearing else null, gps = l.provider == LocationManager.GPS_PROVIDER,
+            speed = if (l.hasSpeed()) l.speed else null,
+        ))
     }
 
     @Deprecated("Deprecated in Java")
