@@ -40,6 +40,7 @@ import app.delve.domain.Ev
 import app.delve.domain.Item
 import app.delve.domain.RoomKind
 import app.delve.domain.stuff
+import app.delve.domain.trait
 import app.delve.ui.theme.C
 import app.delve.ui.theme.T
 
@@ -87,6 +88,8 @@ fun EventLayer(c: AppContainer) {
             val next = (c.state?.run?.depth ?: 1) + e.levels
             Text(w(ru, "Внизу – этаж $next, «${floorName(next, true)}». Там опаснее, но и добыча богаче. Карта этажа начнётся с этого перекрёстка.",
                 "Below lies floor $next, «${floorName(next, false)}». More danger, richer loot. The new floor starts from this crossing."), style = T.Body, textAlign = TextAlign.Center)
+            val now = app.delve.domain.depthMult(c.state?.run?.maxDepth ?: 1); val then = app.delve.domain.depthMult(maxOf(next, c.state?.run?.maxDepth ?: 1))
+            if (then > now) { Gap(6.dp); Text(w(ru, "Ставка глубины: ×${fmt(now)} → ×${fmt(then)} ко всем монетам и материалам, если поднимешься живым.", "Depth stake: ×${fmt(now)} → ×${fmt(then)} on all coins and materials if you come up alive."), style = T.Strong.copy(color = C.gold), textAlign = TextAlign.Center) }
             Gap()
             Btn(w(ru, "Спуститься", "Go down"), Modifier.fillMaxWidth(), BtnKind.WAX) { c.descendStairs(e.node, e.levels) }
             Gap(8.dp)
@@ -97,6 +100,11 @@ fun EventLayer(c: AppContainer) {
             Text(w(ru, "Колодец наверх", "A well up"), style = T.Title)
             Gap(6.dp)
             Text(w(ru, "По скобам можно выбраться в город. Вся добыча из сумки вернётся в лагерь.", "Rungs lead up into town. Everything in your bag comes home to camp."), style = T.Body, textAlign = TextAlign.Center)
+            c.state?.run?.let { r ->
+                val m = app.delve.domain.depthMult(r.maxDepth)
+                if (m > 1) { Gap(6.dp); Text(w(ru, "Ставка глубины ×${fmt(m)}: ${r.coins} монет станут ${(r.coins * m).toInt()}.", "Depth stake ×${fmt(m)}: ${r.coins} coins become ${(r.coins * m).toInt()}."), style = T.Strong.copy(color = C.gold), textAlign = TextAlign.Center) }
+                Orders(c, ru)
+            }
             Gap()
             Btn(w(ru, "Подняться в лагерь", "Climb up to camp"), Modifier.fillMaxWidth(), BtnKind.GOLD) { c.goUp() }
             Gap(8.dp)
@@ -141,6 +149,32 @@ fun EventLayer(c: AppContainer) {
         }
         is Ev.Ended -> EndedScreen(c, e, ru)
     }
+}
+
+fun fmt(m: Double) = "%.2f".format(m).trimEnd('0').trimEnd(',', '.')
+
+/** The guild's orders taken for this expedition, with how far along each is. */
+@Composable
+fun Orders(c: AppContainer, ru: Boolean) {
+    val s = c.state ?: return
+    val run = s.run ?: return
+    if (s.taken.isEmpty()) return
+    Gap(10.dp)
+    Text(w(ru, "ЗАКАЗЫ ГИЛЬДИИ", "GUILD ORDERS"), style = T.Eyebrow)
+    for (o in s.taken) {
+        val p = minOf(o.n, c.game.progress(run, o))
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (p >= o.n) "✔" else "○", style = T.Strong.copy(color = if (p >= o.n) C.green else C.muted))
+            HGap(8.dp)
+            Column(Modifier.weight(1f)) {
+                Text(o.text(ru), style = T.Strong)
+                Bar(p.toFloat() / o.n, if (p >= o.n) C.green else C.gold, height = 5.dp)
+            }
+            HGap(8.dp)
+            Text("$p/${o.n}", style = T.Small)
+        }
+    }
+    Text(w(ru, "Награда – только если поднимешься живым.", "Paid only if you come up alive."), style = T.Small)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -201,8 +235,13 @@ private fun MeetSheet(c: AppContainer, e: Ev.Meet, ru: Boolean) {
         }
         Gap()
         val hp = s.run?.hp ?: 0
+        val trait = f.beast.trait()
+        if (trait != app.delve.domain.Trait.NONE) {
+            Text(trait.title(ru) + ": " + trait.hint(ru), style = T.Small.copy(color = C.ink2), textAlign = TextAlign.Center)
+            Gap(8.dp)
+        }
         Btn(w(ru, "Сразиться здесь", "Fight here"), Modifier.fillMaxWidth(), BtnKind.WAX,
-            sub = w(ru, "потеряешь около $expect из $hp здоровья", "you'd lose about $expect of $hp health")) { c.fight(e.node, f) }
+            sub = w(ru, "бой по раундам · примерно −$expect из $hp", "a fight in rounds · about −$expect of $hp")) { c.fight(e.node, f) }
         Gap(8.dp)
         Btn(w(ru, "Бежать и измотать", "Run and wear it out"), Modifier.fillMaxWidth(), BtnKind.INK,
             sub = w(ru, "пройди ${metres(chase, true)}, иногда будет кусать", "walk ${metres(chase, false)}, it bites now and then")) { c.flee(e.node, f) }
@@ -307,6 +346,15 @@ fun BagSheet(c: AppContainer, onClose: () -> Unit) {
             "All this comes home if you climb a well or read a scroll. If the torch dies or you faint, half stays below."), style = T.Small, textAlign = TextAlign.Center)
         Loot(run.coins, run.bag, run.stuff.filterValues { it > 0 }, ru)
         if (run.coins == 0 && run.bag.isEmpty() && run.stuff.values.all { it == 0 }) { Gap(); Text(w(ru, "Пока пусто.", "Empty so far."), style = T.Note) }
+        val m = app.delve.domain.depthMult(run.maxDepth)
+        if (m > 1) { Gap(6.dp); Text(w(ru, "Ставка глубины ×${fmt(m)} – если подняться живым.", "Depth stake ×${fmt(m)} – if you come up alive."), style = T.Strong.copy(color = C.gold)) }
+        Orders(c, ru)
+        if (run.notes.isNotEmpty()) {
+            Heading(null, w(ru, "Журнал вылазки", "Expedition log"))
+            Column(Modifier.fillMaxWidth().paper(C.floor).padding(10.dp)) {
+                for (n in run.notes.takeLast(12).reversed()) Text("· " + n(ru), style = T.Small.copy(color = C.ink2))
+            }
+        }
         Gap()
         val recall = c.game.count(s, "recall")
         Btn(w(ru, "Прочесть свиток возврата", "Read a recall scroll"), Modifier.fillMaxWidth(), BtnKind.GOLD, enabled = recall > 0, sub = w(ru, "свитков: $recall", "scrolls: $recall")) { onClose(); c.recall() }
@@ -332,6 +380,18 @@ private fun EndedScreen(c: AppContainer, e: Ev.Ended, ru: Boolean) {
                 "faint" -> w(ru, "Тебя вытащил добрый кобольд. Половина добычи осталась внизу.", "A kind kobold dragged you out. Half the loot stayed below.")
                 else -> w(ru, "Вся добыча в лагере. Можно отдыхать и строить.", "All the loot is at camp. Time to rest and build.")
             }, style = T.Body, textAlign = TextAlign.Center)
+            if (e.mult > 1) { Gap(8.dp); Text(w(ru, "Ставка глубины ×${fmt(e.mult)} сыграла!", "The depth stake ×${fmt(e.mult)} paid off!"), style = T.Strong.copy(color = C.gold)) }
+            for (o in e.done) {
+                Gap(8.dp)
+                Row(Modifier.fillMaxWidth().paper(C.floor).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Pic(Art.item(25), Modifier.size(40.dp)); HGap(8.dp)
+                    Column(Modifier.weight(1f)) {
+                        Text(w(ru, "Заказ выполнен", "Order done"), style = T.Eyebrow.copy(color = C.green))
+                        Text(o.text(ru), style = T.Strong)
+                        Text("+${o.coins} " + w(ru, "мон.", "c.") + " · " + (stuff(o.stuffId)?.name?.invoke(ru)?.lowercase() ?: "") + " ×${o.stuffN} · +${o.xp} " + w(ru, "опыта", "xp"), style = T.Small.copy(color = C.gold))
+                    }
+                }
+            }
             Gap(16.dp)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Stat(w(ru, "глубина", "depth"), "${l.depth}")

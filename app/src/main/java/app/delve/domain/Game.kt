@@ -30,14 +30,24 @@ sealed class Ev {
     class Vault(val node: Int) : Ev()
     class Shrine(val node: Int, val offer: List<Int>) : Ev()
     class LevelUp(val level: Int) : Ev()
-    /** The expedition is over. */
-    class Ended(val log: RunLog, val lost: Boolean) : Ev()
+    /** The expedition is over: what came home, at what depth stake, and which orders paid. */
+    class Ended(val log: RunLog, val lost: Boolean, val mult: Double = 1.0, val done: List<Contract> = emptyList()) : Ev()
+}
+
+/** A fight in rounds: the creature shows what it means to do, the hero answers with a move. */
+class Battle(val node: Int, val foe: Foe, var hp: Int, var intent: Intent) {
+    var round = 0
+    val log = ArrayList<Tx>()
+    var lost = 0
 }
 
 /**
  * The rules. Stateless: everything lives in [GameState] and the [Floor] (rebuilt from the graph), so the
  * same calls drive the app, the demo and the tests.
  */
+/** Marks a resolve asked for by the hero (a tap on the room card), not by walking in. */
+val REVISIT = Conditions()
+
 class Game {
     fun newGame(name: String, cls: String, female: Boolean): GameState {
         val s = GameState(name, cls, female)
@@ -120,6 +130,7 @@ class Game {
         val run = s.run ?: return
         run.walked += m
         s.metres += m
+        run.prog["metres"] = run.walked.toInt()
         val ch = run.chase ?: return
         ch.left -= m
         val st = stats(s)
@@ -140,7 +151,7 @@ class Game {
             val r = rnd(run, 5)
             val (coins, items, stuff) = spoils(s, f, r)
             lore(s, f.beast.id).beaten++
-            run.beaten++
+            run.beaten++; run.prog.merge("beaten", 1, Int::plus)
             gainXp(s, f.xp, out)
             out += Ev.Fought(f, true, listOf(Tx("${f.beast.name.ru} выдохся и отстал.", "${f.beast.name.en} ran out of breath and gave up.")), 0, coins, items, stuff, false)
         }
@@ -172,7 +183,10 @@ class Game {
         run.at = node
         val first = run.visited.add(node)
         run.seen += node
-        if (first) { run.rooms++; gainXp(s, 4, out) }
+        if (first) {
+            run.rooms++; gainXp(s, 4, out)
+            f.rooms[node]?.let { run.prog.merge("room:" + it.kind.name, 1, Int::plus) }
+        }
         val room = f.rooms[node] ?: return
         resolve(s, f, room, first, cond, out)
     }
@@ -191,7 +205,7 @@ class Game {
     fun revisit(s: GameState, f: Floor, cond: Conditions, out: MutableList<Ev>) {
         val run = s.run ?: return
         val room = f.rooms[run.at] ?: return
-        resolve(s, f, room, false, cond, out)
+        resolve(s, f, room, false, REVISIT, out)
     }
 
     private fun resolve(s: GameState, f: Floor, room: Room, first: Boolean, cond: Conditions, out: MutableList<Ev>) {
@@ -200,6 +214,8 @@ class Game {
         val st = stats(s)
         val r = rnd(run, n)
         val done = n in run.resolved
+        // the merchant greets you on the first visit; afterwards a tap on the room card calls him
+        val prevSame = !first && run.at == n && cond === REVISIT
         val abv = room.above
         fun meet(id: String) {
             if (run.chase != null) {
@@ -211,14 +227,14 @@ class Game {
             out += Ev.Meet(n, fo)
         }
         when (room.kind) {
-            RoomKind.START -> if (!first) Unit
+            RoomKind.START -> if (!first && run.depth == 1) out += Ev.Well(n)
             RoomKind.DOWN -> out += Ev.Stairs(n, 1)
             RoomKind.SHAFT -> if (run.depth < 3 || done) out += Ev.News(room.kind, room.kind.title, Tx("Шахта уходит глубоко вниз, но верёвка оборвана. Пока не спуститься.", "The shaft goes deep, but the rope is cut. No way down yet."))
                 else out += Ev.Stairs(n, 2)
             RoomKind.UP -> out += Ev.Well(n)
             RoomKind.BOSS -> if (done) out += Ev.Stairs(n, 1) else meet(room.beast ?: bossFor(run.depth).id)
             RoomKind.LAIR, RoomKind.CRYPT -> if (!done) meet(room.beast ?: "rat") else if (room.kind == RoomKind.CRYPT && first) Unit
-            RoomKind.MERCHANT -> out += Ev.Shop(n, stock(s, run, n), listOf("potion", "treat", "smoke", "lockpick", "mapscroll", "recall"))
+            RoomKind.MERCHANT -> if (first || prevSame) out += Ev.Shop(n, stock(s, run, n), listOf("potion", "treat", "smoke", "lockpick", "mapscroll", "recall"))
             RoomKind.VAULT -> if (!done) out += Ev.Vault(n)
             RoomKind.SHRINE -> if (!done) {
                 val a = r.nextInt(BLESSINGS.size); var b = r.nextInt(BLESSINGS.size - 1); if (b >= a) b++
@@ -288,7 +304,7 @@ class Game {
 
     private fun take(run: Run, coins: Int, items: List<Item>, stuff: Map<String, Int>) {
         run.coins += coins; run.bag += items
-        for ((k, v) in stuff) run.stuff.merge(k, v, Int::plus)
+        for ((k, v) in stuff) { run.stuff.merge(k, v, Int::plus); run.prog.merge("stuff:$k", v, Int::plus) }
     }
 
     fun newItem(s: GameState, r: Random, depth: Int, luck: Int, slot: Slot? = null): Item {
@@ -368,7 +384,7 @@ class Game {
         if (foeHp <= 0) {
             run.resolved += node
             val (coins, items, stuff) = spoils(s, f, r)
-            lore(s, f.beast.id).beaten++; run.beaten++
+            lore(s, f.beast.id).beaten++; run.beaten++; run.prog.merge("beaten", 1, Int::plus)
             gainXp(s, f.xp, out)
             out.add(0, Ev.Fought(f, true, log, lost, coins, items, stuff, false))
         } else if (run.hp > 0) {
@@ -406,6 +422,7 @@ class Game {
         if (ok) {
             run.resolved += node
             lore(s, f.beast.id).tamed = true
+            run.prog.merge("tamed", 1, Int::plus)
             if (s.companion == null) s.companion = f.beast.id
             gainXp(s, f.xp, out)
         } else flee(s, node, f)   // it ate the treat and still wants more: a chase
@@ -516,18 +533,169 @@ class Game {
     fun end(s: GameState, now: Long, day: Long, how: String): Ev.Ended {
         val run = s.run!!
         val lost = how == "dark" || how == "faint"
+        // the depth stake: what is carried up alive is multiplied; lost in the dark, half stays below and no stake
+        val mult = if (lost) 1.0 else depthMult(run.maxDepth)
         val keep = if (lost) run.bag.filterIndexed { i, _ -> i % 2 == 0 } else run.bag
         s.gear += keep
-        s.coins += if (lost) run.coins / 2 else run.coins
-        for ((k, v) in run.stuff) s.stuff.merge(k, if (lost) v / 2 else v, Int::plus)
+        val coins = if (lost) run.coins / 2 else (run.coins * mult).roundToInt()
+        s.coins += coins
+        for ((k, v) in run.stuff) {
+            val material = stuff(k)?.material == true
+            s.stuff.merge(k, if (lost) v / 2 else if (material) (v * mult).roundToInt() else v, Int::plus)
+        }
         s.deepest = max(s.deepest, run.maxDepth)
+        run.prog["depth"] = run.maxDepth
+        val done = if (lost) emptyList() else s.taken.filter { progress(run, it) >= it.n }
+        val out = ArrayList<Ev>()
+        for (c in done) {
+            s.coins += c.coins
+            s.stuff.merge(c.stuffId, c.stuffN, Int::plus)
+            gainXp(s, c.xp, out)
+        }
+        s.taken.removeAll(done.toSet())
         val log = RunLog(day, run.maxDepth, run.walked.toInt(), ((now - run.started) / 60_000).toInt(), run.rooms, run.beaten,
-            if (lost) run.coins / 2 else run.coins, keep.size, run.xp, how, run.trail.toList())
+            coins, keep.size, run.xp, how, run.trail.toList())
         s.logs.add(0, log)
         while (s.logs.size > 60) s.logs.removeAt(s.logs.size - 1)
         s.run = null
-        return Ev.Ended(log, lost)
+        return Ev.Ended(log, lost, mult, done)
     }
+
+    // ——— the fight in rounds ———
+
+    private fun nextIntent(f: Foe, r: Random): Intent {
+        val heavy = if (f.beast.trait() == Trait.BRUTE || f.boss) 40 else 22
+        val guard = if (f.beast.trait() == Trait.ARMOR) 26 else 16
+        val x = r.nextInt(100)
+        return when { x < heavy -> Intent.HEAVY; x < heavy + guard -> Intent.GUARD; else -> Intent.ATTACK }
+    }
+
+    fun battle(s: GameState, node: Int, f: Foe): Battle {
+        val run = s.run!!
+        return Battle(node, f, f.hp, nextIntent(f, rnd(run, node * 11)))
+    }
+
+    /** How the hero's weapon fares against the creature's hide. */
+    fun weaponK(s: GameState, f: Foe): Double {
+        val blunt = s.equippedIn(Slot.WEAPON)?.base in BLUNT
+        return when (f.beast.trait()) {
+            Trait.ARMOR -> if (blunt) 1.5 else .5
+            Trait.SOFT -> if (blunt) .5 else 1.5
+            Trait.GHOST -> .35
+            else -> 1.0
+        }
+    }
+
+    /** One round: the hero's [move] against the creature's shown intent. Returns true when the fight is over. */
+    fun move(s: GameState, b: Battle, move: Move, out: MutableList<Ev>): Boolean {
+        val run = s.run ?: return true
+        val st = stats(s)
+        val f = b.foe
+        val r = rnd(run, b.node * 13 + b.round * 7 + 1)
+        b.round++
+        val trait = f.beast.trait()
+        val name = f.beast.name
+        val k = weaponK(s, f)
+        fun dmg(mult: Double) = max(1, ((st.dmg + r.nextInt(4) + 1) * k * mult).roundToInt())
+        var foeActs = true
+        when (move) {
+            Move.STRIKE -> {
+                val roll = r.nextInt(20) + 1
+                val target = f.def + (if (b.intent == Intent.GUARD) 6 else 0) + (if (trait == Trait.SWIFT) 4 else 0)
+                if (roll == 20 || roll + st.atk >= target) {
+                    val d = dmg(if (roll == 20) 2.0 else 1.0)
+                    b.hp -= d
+                    b.log += if (roll == 20) Tx("Точный удар! −$d", "A perfect hit! −$d") else Tx("Удар: −$d", "Strike: −$d")
+                } else b.log += if (b.intent == Intent.GUARD) Tx("Удар отскочил от защиты.", "The blow bounces off its guard.") else Tx("Промах.", "Miss.")
+            }
+            Move.GUARD -> b.log += Tx("Ты закрылся.", "You take cover.")
+            Move.TRICK -> {
+                val roll = r.nextInt(20) + 1 + st.luck + (if (s.cls == "rogue") 4 else 0) + (if (trait == Trait.SWIFT || trait == Trait.GHOST) 4 else 0)
+                if (roll >= 11 + f.tier) {
+                    val d = max(1, ((st.dmg + r.nextInt(4) + 1) * (if (trait == Trait.GHOST) 1.0 else .6) * (if (b.intent == Intent.GUARD) 2.0 else 1.0)).roundToInt())
+                    b.hp -= d; foeActs = false
+                    b.log += Tx("Хитрость удалась: ${name.ru} сбит с толку, −$d", "The trick works: ${name.en} is dazed, −$d")
+                } else b.log += Tx("${name.ru} не поддался на уловку.", "${name.en} won’t fall for it.")
+            }
+        }
+        if (b.hp > 0 && foeActs && b.intent != Intent.GUARD) {
+            val shy = trait == Trait.SHY && st.light >= 60
+            val atk = f.atk - if (shy) 3 else 0
+            val fr = r.nextInt(20) + 1
+            if (move == Move.GUARD || fr + atk >= st.def) {
+                var d = max(1, f.dmg + r.nextInt(3) - 1 - if (shy) 1 else 0)
+                if (b.intent == Intent.HEAVY) d *= 2
+                if (move == Move.GUARD) {
+                    d /= 4
+                    val c = max(1, (st.dmg / 2.0 * k).roundToInt()); b.hp -= c
+                    b.log += Tx("Принял удар на защиту (−$d) и ткнул в ответ: −$c", "Took the blow on your guard (−$d) and jabbed back: −$c")
+                } else b.log += if (b.intent == Intent.HEAVY) Tx("${name.ru} бьёт со всей силы: −$d тебе", "${name.en} hits with all its might: −$d to you") else Tx("${name.ru} попадает: −$d тебе", "${name.en} hits you: −$d")
+                run.hp -= d; b.lost += d
+            } else b.log += Tx("${name.ru} промахивается.", "${name.en} misses.")
+        } else if (b.hp > 0 && b.intent == Intent.GUARD && foeActs) b.log += Tx("${name.ru} выжидает.", "${name.en} bides its time.")
+        b.intent = nextIntent(f, r)
+        val over = b.hp <= 0 || run.hp <= 0 || b.round >= 12
+        if (!over) return false
+        if (b.hp <= 0) {
+            run.resolved += b.node
+            val (coins, items, stuff) = spoils(s, f, r)
+            lore(s, f.beast.id).beaten++; run.beaten++; run.prog.merge("beaten", 1, Int::plus)
+            gainXp(s, f.xp, out)
+            out.add(0, Ev.Fought(f, true, b.log, b.lost, coins, items, stuff, false))
+        } else if (run.hp > 0) {
+            run.resolved += b.node
+            gainXp(s, f.xp / 2, out)
+            b.log += Tx("${name.ru} убегает в темноту.", "${name.en} flees into the dark.")
+            out.add(0, Ev.Fought(f, false, b.log, b.lost, 0, emptyList(), emptyMap(), true))
+        } else out.add(0, Ev.Fought(f, false, b.log, b.lost, 0, emptyList(), emptyMap(), false))
+        return true
+    }
+
+    // ——— the guild's board ———
+
+    fun progress(run: Run, c: Contract): Int = when (c.kind) {
+        "depth" -> run.maxDepth
+        else -> run.prog[c.kind] ?: 0
+    }
+
+    /** A fresh board each day: three orders sized to how deep the hero has been. */
+    fun board(s: GameState, day: Long) {
+        if (s.boardDay == day && s.board.isNotEmpty()) return
+        s.boardDay = day
+        s.board.clear()
+        val r = Random(day * 7919 + s.name.hashCode())
+        val deep = max(2, s.deepest)
+        val kinds = mutableListOf(
+            "depth" to (deep + r.nextInt(2)).coerceAtMost(30),
+            "beaten" to 2 + r.nextInt(3) + deep / 3,
+            "metres" to (1 + r.nextInt(3)) * 500,
+            "stuff:mushroom" to 3 + r.nextInt(4),
+            "stuff:pearl" to 2 + r.nextInt(3),
+            "stuff:bone" to 3 + r.nextInt(4),
+            "room:GROTTO" to 1, "room:RIVER" to 1, "room:CRYPT" to 1, "room:MERCHANT" to 1, "room:SPRING" to 1,
+            "tamed" to 1,
+        )
+        if (deep >= 3) kinds += "stuff:crystal" to 2 + r.nextInt(3)
+        kinds.shuffle(r)
+        for ((kind, n) in kinds.take(3)) {
+            val hard = when { kind == "depth" -> n * 1.4; kind == "tamed" -> 3.0; kind.startsWith("room:") -> 1.8; kind == "metres" -> n / 400.0; else -> n / 2.0 }
+            val mat = listOf("iron", "wax", "pearl", "crystal", "mushroom", "bone")[r.nextInt(6)]
+            s.board += Contract(s.nextUid++, kind, n, (15 + 12 * hard + 3 * deep).roundToInt(), mat, 1 + (hard / 2).toInt(), (20 + 15 * hard).roundToInt())
+        }
+    }
+
+    fun takeOrder(s: GameState, id: Long): Boolean {
+        if (s.taken.size >= 2) return false
+        val c = s.board.firstOrNull { it.id == id } ?: return false
+        s.board.remove(c); s.taken += c
+        return true
+    }
+
+    fun dropOrder(s: GameState, id: Long) {
+        val c = s.taken.firstOrNull { it.id == id } ?: return
+        s.taken.remove(c); s.board += c
+    }
+
 
     // ——— camp ———
 

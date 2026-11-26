@@ -78,6 +78,7 @@ fun Root() {
             else -> Main(c)
         }
         EventLayer(c)
+        BattleSheet(c)
     }
     remember(v) { 0 }
 }

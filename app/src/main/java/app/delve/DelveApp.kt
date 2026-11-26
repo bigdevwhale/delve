@@ -15,6 +15,9 @@ import app.delve.domain.GameState
 import app.delve.domain.Geo
 import app.delve.domain.Graph
 import app.delve.domain.Item
+import app.delve.domain.Battle
+import app.delve.domain.Move
+import app.delve.domain.Tx
 import app.delve.domain.Recipe
 import app.delve.domain.Weather
 import app.delve.domain.metres
@@ -52,8 +55,12 @@ class AppContainer(context: Context) {
     var forecast: Forecast? = null
         private set
     val here = MutableStateFlow<Geo?>(null)
-    /** Screens to show, oldest first. */
+    /** Screens to show, oldest first: only what asks for a choice. */
     val events = MutableStateFlow<List<Ev>>(emptyList())
+    /** Quiet news slid over the map for a moment (an empty hall, a chest, a bite…), newest last. */
+    val toasts = MutableStateFlow<List<Ev>>(emptyList())
+    /** A fight in rounds, while it lasts. */
+    val battle = MutableStateFlow<Battle?>(null)
     /** download, parse, or empty. */
     val stage = MutableStateFlow("")
     @Volatile var visible = false
@@ -79,7 +86,7 @@ class AppContainer(context: Context) {
         val key = "${run.seed}/${run.depth}/${run.floorStart}"
         if (key != floorKey || floorCache == null) {
             if (run.floorStart !in g.nodes.indices) return null
-            floorCache = Floor(g, d, run.depth, run.seed, run.floorStart, conditions())
+            floorCache = Floor(g, d, run.depth, run.seed, run.floorStart, Conditions(night = run.night, rain = run.rain))
             floorKey = key
         }
         return floorCache
@@ -144,6 +151,7 @@ class AppContainer(context: Context) {
             s.torchPick = minutes
             val run = game.startRun(s, n.id, minutes, System.currentTimeMillis(), System.nanoTime() xor at.lat.toBits())
             run.at = n.id; run.visited += n.id; run.seen += n.id
+            conditions().let { run.night = it.night; run.rain = it.rain }
             floor()?.let { f -> game.look(s, f, x, y) }
             lastFix = at; lastFixAt = System.currentTimeMillis(); warned = 0
             run.trail += at.lat; run.trail += at.lon
@@ -153,7 +161,23 @@ class AppContainer(context: Context) {
         return null
     }
 
-    private fun push(evs: List<Ev>) {
+    /** News that needs no choice: it goes to the journal and a toast, not a sheet. */
+    private fun quiet(e: Ev) = e is Ev.News || e is Ev.LevelUp || (e is Ev.Fought && e.won)
+
+    private fun push(all: List<Ev>) {
+        if (all.isEmpty()) return
+        val run = state?.run
+        for (e in all.filter(::quiet)) {
+            when (e) {
+                is Ev.News -> run?.note(Tx(e.title.ru + ". " + e.text.ru, e.title.en + ". " + e.text.en))
+                is Ev.LevelUp -> run?.note(Tx("Новый уровень: ${e.level}!", "New level: ${e.level}!"))
+                is Ev.Fought -> run?.note(Tx("${e.foe.beast.name.ru} отстал. +${e.coins} монет", "${e.foe.beast.name.en} gave up. +${e.coins} coins"))
+                else -> Unit
+            }
+        }
+        toasts.value = (toasts.value + all.filter(::quiet)).takeLast(4)
+        val evs = all.filterNot(::quiet)
+        if (!visible && all.any(::quiet) && evs.isEmpty() && state?.vibrate != false) Buzz.play(app, Buzz.ROOM)
         if (evs.isEmpty()) return
         events.value = events.value + evs
         if (!visible) {
@@ -176,6 +200,9 @@ class AppContainer(context: Context) {
 
     /** The screen dealt with the oldest event. */
     fun pop() { events.value = events.value.drop(1) }
+
+    /** The map showed the oldest toast long enough. */
+    fun toastDone(e: Ev) { toasts.value = toasts.value.filter { it !== e } }
 
     /** A new position: walking, the chase, rooms entered, the lantern's reach. */
     @Synchronized
@@ -205,7 +232,7 @@ class AppContainer(context: Context) {
         val enter = 18.0 / d.mpp
         val near = f.nodes.minByOrNull { val n = f.g.nodes[it]; (n.x - x) * (n.x - x) + (n.y - y) * (n.y - y) }
         if (near != null && hypot(f.g.nodes[near].x - x, f.g.nodes[near].y - y) <= enter && near != run.at && run.hp > 0) {
-            game.enter(s, f, near, t, conditions(), out)
+            game.enter(s, f, near, t, Conditions(night = run.night, rain = run.rain), out)
         }
         push(out)
         checkEnd()
@@ -257,7 +284,33 @@ class AppContainer(context: Context) {
         changed()
     }
 
-    fun fight(node: Int, foe: Foe) = act { out -> state?.let { game.fight(it, node, foe, out) } }
+    fun fight(node: Int, foe: Foe) {
+        val s = state ?: return
+        pop()
+        battle.value = synchronized(this) { game.battle(s, node, foe) }
+    }
+
+    /** One round of the fight; when it is over, its outcome becomes a sheet. */
+    fun move(m: Move) {
+        val s = state ?: return
+        val b = battle.value ?: return
+        val out = ArrayList<Ev>()
+        val over = synchronized(this) { game.move(s, b, m, out) }
+        battle.value = null
+        battle.value = if (over) null else b
+        if (out.isNotEmpty()) {
+            // a level-up during the fight is quiet news; the outcome is a sheet
+            val loud = out.filter { it is Ev.Fought }
+            toasts.value = (toasts.value + out.filter { it is Ev.LevelUp }).takeLast(4)
+            events.value = loud + events.value
+        }
+        checkEnd()
+        changed()
+    }
+
+    fun takeOrder(id: Long) { state?.let { game.takeOrder(it, id) }; changed() }
+    fun dropOrder(id: Long) { state?.let { game.dropOrder(it, id) }; changed() }
+    fun board() { val s = state ?: return; if (s.boardDay != LocalDate.now().toEpochDay() || s.board.isEmpty()) { game.board(s, LocalDate.now().toEpochDay()); changed() } }
     fun flee(node: Int, foe: Foe) = act { state?.let { game.flee(it, node, foe) } }
     fun tame(node: Int, foe: Foe) = act { out -> state?.let { game.tame(it, node, foe, out) } }
     fun descendStairs(node: Int, levels: Int) = act { out ->

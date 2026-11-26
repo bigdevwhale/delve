@@ -60,6 +60,7 @@ fun CampScreen(c: AppContainer, onSettings: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     val stats = remember(v) { c.game.stats(s, null) }
     val cond = remember(v) { c.conditions() }
+    androidx.compose.runtime.LaunchedEffect(Unit) { c.board() }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
@@ -137,9 +138,15 @@ fun CampScreen(c: AppContainer, onSettings: () -> Unit) {
                     Text(w(ru, "Рекорд глубины: ${s.deepest} · пройдено всего ${metres(s.metres.toInt(), true)}", "Deepest: ${s.deepest} · walked in all ${metres(s.metres.toInt(), false)}"), style = T.Small, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
 
+                Heading(w(ru, "возьми до двух перед спуском", "take up to two before going down"), w(ru, "Доска гильдии", "Guild board"))
+                for (o in s.taken) OrderCard(o, ru, taken = true) { c.dropOrder(o.id) }
+                for (o in s.board) OrderCard(o, ru, taken = false, enabled = s.taken.size < 2) { c.takeOrder(o.id) }
+                if (s.board.isEmpty() && s.taken.isEmpty()) Text(w(ru, "Новые заказы появятся завтра.", "New orders come tomorrow."), style = T.Note, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Text(w(ru, "Заказ оплачивается, когда поднимешься живым: через колодец, люк или по свитку.", "An order pays when you come up alive: through a well, the hatch or by scroll."), style = T.Small, modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = TextAlign.Center)
+
                 Heading(w(ru, "лагерь растёт из добычи", "the camp grows from loot"), w(ru, "Постройки", "Buildings"))
-                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp), maxItemsInEachRow = 2) {
-                    for (b in BUILDINGS) {
+                for (row in BUILDINGS.chunked(2)) Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    for (b in row) {
                         val lv = s.level(b.id)
                         Column(Modifier.weight(1f).paper(if (lv > 0) C.floor else C.paper).clickable { open = b.id }.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Pic(Art.camp(b.id), Modifier.fillMaxWidth().aspectRatio(1.25f), alpha = if (lv > 0) 1f else .45f)
@@ -159,6 +166,22 @@ fun CampScreen(c: AppContainer, onSettings: () -> Unit) {
         }
         open?.let { BuildingSheet(c, it, ru) { open = null } }
         PageHint(c, "camp")
+    }
+}
+
+@Composable
+private fun OrderCard(o: app.delve.domain.Contract, ru: Boolean, taken: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).paper(if (taken) C.floor else C.paper, ink = if (taken) C.gold else C.ink).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Pic(Art.item(25), Modifier.size(44.dp))
+        HGap(10.dp)
+        Column(Modifier.weight(1f)) {
+            Text(o.text(ru), style = T.Strong)
+            val h = o.hint(ru)
+            if (h.isNotBlank()) Text(h, style = T.Small)
+            Text("+${o.coins} " + w(ru, "мон.", "c.") + " · " + (stuff(o.stuffId)?.name?.invoke(ru)?.lowercase() ?: "") + " ×${o.stuffN} · +${o.xp} " + w(ru, "опыта", "xp"), style = T.Small.copy(color = C.gold))
+        }
+        HGap(8.dp)
+        Btn(if (taken) w(ru, "Взят", "Taken") else w(ru, "Взять", "Take"), kind = if (taken) BtnKind.GOLD else BtnKind.LINE, enabled = taken || enabled) { onClick() }
     }
 }
 

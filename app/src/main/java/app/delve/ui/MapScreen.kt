@@ -181,7 +181,7 @@ fun DungeonScreen(c: AppContainer, onBag: () -> Unit) {
                         val nd = f.g.nodes[g]
                         val q = floatArrayOf(nd.x, nd.y); m.mapPoints(q)
                         val inset = 34 * density
-                        val top = 200 * density; val bottom = size.height - 230 * density
+                        val top = 200 * density; val bottom = size.height - 330 * density
                         if (q[0] in inset..size.width - inset && q[1] in top..bottom) continue
                         val dx = q[0] - pt[0]; val dy = q[1] - pt[1]
                         var k = 1f
@@ -200,11 +200,12 @@ fun DungeonScreen(c: AppContainer, onBag: () -> Unit) {
         Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Hud(run.depth, left = c.game.torchLeft(run, now), total = run.torchMin.toDouble(), hp = run.hp, maxHp = stats.maxHp, ru = ru)
             Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
-                Text("${w(ru, "Этаж", "Floor")} ${run.depth} · ${floorName(run.depth, ru)}", style = T.Heading.copy(fontSize = T.Heading.fontSize),
+                Text("${w(ru, "Этаж", "Floor")} ${run.depth} · ${floorName(run.depth, ru)}" + if (run.maxDepth > 1) "  ·  ×" + "%.2f".format(app.delve.domain.depthMult(run.maxDepth)).trimEnd('0').trimEnd(',', '.') else "", style = T.Heading.copy(fontSize = T.Heading.fontSize),
                     modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(C.paper.copy(alpha = .86f)).border(1.dp, C.ink.copy(alpha = .5f), RoundedCornerShape(20.dp)).padding(horizontal = 14.dp, vertical = 3.dp))
             }
         }
 
+        ToastLayer(c, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 112.dp, start = 12.dp, end = 12.dp))
         HelpButton(c, "dungeon", Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 198.dp, end = 24.dp))
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(12.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
@@ -225,7 +226,7 @@ fun DungeonScreen(c: AppContainer, onBag: () -> Unit) {
             Gap(8.dp)
             val ch = run.chase
             if (ch != null) ChaseCard(c, ch.beast, ch.left, ch.total, ru)
-            else RoomCard(c, f, run, ru)
+            else RoomCard(c, f, run, ru, v)
             Gap(8.dp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ToolBtn(w(ru, "Сумка", "Bag"), 28, run.bag.size + run.stuff.values.sum(), Modifier.weight(1f)) { onBag() }
@@ -335,13 +336,13 @@ private fun ChaseCard(c: AppContainer, id: String, left: Double, total: Double, 
 }
 
 @Composable
-private fun RoomCard(c: AppContainer, f: Floor, run: Run, ru: Boolean) {
+private fun RoomCard(c: AppContainer, f: Floor, run: Run, ru: Boolean, @Suppress("UNUSED_PARAMETER") version: Int) {
     val room = f.rooms[run.at]
     val kind = room?.kind ?: RoomKind.EMPTY
     val done = run.at in run.resolved
     val (title, hint) = when (kind) {
         RoomKind.START -> (if (run.depth == 1) w(ru, "Люк в мостовой", "The hatch") else w(ru, "Подножие лестницы", "Foot of the stairs")) to
-            w(ru, "Иди по улицам: каждый перекрёсток – новый зал. Лестница вниз где-то в ${metres(f.dist[f.down]?.toInt()?.div(100)?.times(100) ?: 400, true)} пути.",
+            if (run.depth == 1 && run.rooms > 1) w(ru, "Нажми, чтобы подняться через люк в лагерь со всей добычей.", "Tap to climb out through the hatch to camp with all your loot.") else w(ru, "Иди по улицам: каждый перекрёсток – новый зал. Лестница вниз где-то в ${metres(f.dist[f.down]?.toInt()?.div(100)?.times(100) ?: 400, true)} пути.",
                 "Walk the streets: every crossing is a new hall. The stairs down are about ${metres(f.dist[f.down]?.toInt()?.div(100)?.times(100) ?: 400, false)} away.")
         RoomKind.DOWN -> kind.title(ru) to w(ru, "Нажми, чтобы спуститься глубже.", "Tap to go deeper.")
         RoomKind.UP -> kind.title(ru) to w(ru, "Нажми, чтобы подняться в лагерь со всей добычей.", "Tap to climb up to camp with all your loot.")
@@ -349,7 +350,7 @@ private fun RoomCard(c: AppContainer, f: Floor, run: Run, ru: Boolean) {
         RoomKind.BOSS -> kind.title(ru) to if (done) w(ru, "Хозяин повержен. Лестница вниз свободна.", "The master is beaten. The stairs are free.") else w(ru, "Здесь кто-то очень большой.", "Something very big lives here.")
         else -> kind.title(ru) to if (room?.above?.isNotBlank() == true) w(ru, "Над тобой – «${room.above}».", "Above you: «${room.above}».") else w(ru, "Ищи следующий зал. Факел горит.", "Find the next hall. The torch burns.")
     }
-    val tappable = kind in setOf(RoomKind.DOWN, RoomKind.UP, RoomKind.MERCHANT) || (kind == RoomKind.BOSS && done)
+    val tappable = kind in setOf(RoomKind.DOWN, RoomKind.UP, RoomKind.MERCHANT) || (kind == RoomKind.BOSS && done) || (kind == RoomKind.START && run.depth == 1)
     Row(Modifier.fillMaxWidth().paper(C.floor).clickable(enabled = tappable) { c.reopen() }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)).background(C.paper).border(1.dp, C.ink.copy(alpha = .4f), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
             Pic(Art.room(kind.art), Modifier.size(40.dp), tint = androidx.compose.ui.graphics.ColorFilter.tint(C.ink))

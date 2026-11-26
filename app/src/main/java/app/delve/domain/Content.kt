@@ -313,3 +313,84 @@ val BLESSINGS = listOf(
     Tx("Благословение света", "Blessing of light") to Mods(light = 25),
     Tx("Благословение удачи", "Blessing of luck") to Mods(luck = 3, loot = 15),
 )
+
+// ——— traits: what makes each creature a different fight ———
+
+enum class Trait(val title: Tx, val hint: Tx) {
+    NONE(Tx("", ""), Tx("", "")),
+    ARMOR(Tx("Панцирь", "Armoured"), Tx("Режущее оружие почти не берёт, дробящее – бьёт вдвойне.", "Blades barely bite; blunt weapons hit twice as hard.")),
+    SOFT(Tx("Мягкотелый", "Soft"), Tx("Дробящее вязнет, режущее – рассекает.", "Blunt weapons sink in; blades cut deep.")),
+    SWIFT(Tx("Юркий", "Quick"), Tx("По нему трудно попасть ударом. Хитрость работает лучше.", "Hard to hit with a blow. Tricks work better.")),
+    BRUTE(Tx("Громила", "Brute"), Tx("Часто замахивается со всей силы – вовремя защищайся.", "Often swings with all its might: guard in time.")),
+    SHY(Tx("Боится света", "Light-shy"), Tx("Если твой свет дальше 60 м, бьёт слабее.", "If your light reaches past 60 m, it hits softer.")),
+    GHOST(Tx("Бесплотный", "Ghostly"), Tx("Удары проходят насквозь. Помогает только хитрость… или защита.", "Blows pass right through. Only tricks help… or guarding.")),
+}
+
+val TRAITS: Map<String, Trait> = mapOf(
+    "rat" to Trait.SWIFT, "slime" to Trait.SOFT, "bat" to Trait.SHY, "goblin" to Trait.SWIFT, "spider" to Trait.SWIFT,
+    "kobold" to Trait.NONE, "mimic" to Trait.ARMOR, "snail" to Trait.ARMOR, "skeleton" to Trait.ARMOR, "draught" to Trait.GHOST,
+    "ghoul" to Trait.SHY, "candlewraith" to Trait.GHOST, "bonedog" to Trait.SWIFT, "shroomling" to Trait.SOFT, "mole" to Trait.NONE,
+    "mossman" to Trait.SOFT, "firefly" to Trait.SWIFT, "toad" to Trait.SOFT, "crab" to Trait.ARMOR, "eel" to Trait.SWIFT,
+    "waterman" to Trait.BRUTE, "axolotl" to Trait.SOFT, "golem" to Trait.ARMOR, "troll" to Trait.BRUTE, "basilisk" to Trait.NONE,
+    "minotaur" to Trait.BRUTE, "gargoyle" to Trait.ARMOR, "cube" to Trait.SOFT, "apprentice" to Trait.GHOST, "deepgnome" to Trait.NONE,
+    "wyrmling" to Trait.BRUTE, "shadow" to Trait.SHY, "crystalspider" to Trait.ARMOR, "salamander" to Trait.SWIFT, "hydra" to Trait.BRUTE,
+    "ratking" to Trait.SWIFT, "cryptkeeper" to Trait.ARMOR, "spiderqueen" to Trait.SWIFT, "olddragon" to Trait.BRUTE, "cityworm" to Trait.BRUTE,
+)
+
+fun Beast.trait(): Trait = TRAITS[id] ?: Trait.NONE
+
+/** Weapons that crush rather than cut. */
+val BLUNT = setOf("mace", "staff", "sling", "pickaxe")
+
+/** What the creature means to do this round: shown above it, so the hero can answer. */
+enum class Intent(val title: Tx, val hint: Tx) {
+    ATTACK(Tx("Атакует", "Attacks"), Tx("обычный удар", "a normal blow")),
+    HEAVY(Tx("Замахивается!", "Winds up!"), Tx("двойной урон – лучше защититься", "double damage: better guard")),
+    GUARD(Tx("Прикрылся", "Guards"), Tx("удар отскочит – попробуй хитрость", "a blow will bounce off: try a trick")),
+}
+
+enum class Move(val title: Tx, val hint: Tx) {
+    STRIKE(Tx("Удар", "Strike"), Tx("урон оружием", "weapon damage")),
+    GUARD(Tx("Защита", "Guard"), Tx("урон по тебе ×¼, ответный тычок", "damage to you ×¼, a counter-jab")),
+    TRICK(Tx("Хитрость", "Trick"), Tx("оглушить и ударить в щель", "stun it and hit the gap")),
+}
+
+// ——— the guild's board: orders for an expedition ———
+
+/**
+ * An order: [kind] is what to count (depth, beaten, tamed, metres, room:KIND, stuff:id), [n] how much.
+ * It pays only when the hero comes back up alive.
+ */
+class Contract(val id: Long, val kind: String, val n: Int, val coins: Int, val stuffId: String, val stuffN: Int, val xp: Int) {
+    fun text(ru: Boolean): String = when {
+        kind == "depth" -> if (ru) "Спустись на $n-й этаж" else "Reach floor $n"
+        kind == "beaten" -> if (ru) "Одолей существ: $n" else "Beat $n creatures"
+        kind == "tamed" -> if (ru) "Приручи кого-нибудь" else "Tame a creature"
+        kind == "metres" -> if (ru) "Пройди под городом $n м" else "Walk $n m under the town"
+        kind.startsWith("room:") -> runCatching { RoomKind.valueOf(kind.substring(5)) }.getOrNull()?.let { k ->
+            if (ru) "Найди: ${k.title.ru.lowercase()}" + (if (n > 1) " ×$n" else "") else "Find: ${k.title.en.lowercase()}" + (if (n > 1) " ×$n" else "")
+        } ?: kind
+        kind.startsWith("stuff:") -> stuff(kind.substring(6))?.let { st -> if (ru) "Принеси: ${st.name.ru.lowercase()} ×$n" else "Bring ${st.name.en.lowercase()} ×$n" } ?: kind
+        else -> kind
+    }
+
+    /** Where to go for it: a word that points the walk. */
+    fun hint(ru: Boolean): String = when {
+        kind == "stuff:mushroom" || kind == "room:GROTTO" -> if (ru) "грибы растут в гротах под парками" else "mushrooms grow in grottoes under parks"
+        kind == "stuff:pearl" || kind == "room:RIVER" -> if (ru) "река течёт там, где наверху пруд, канал или набережная" else "a river runs where there is a pond, canal or embankment above"
+        kind == "stuff:bone" || kind == "room:CRYPT" -> if (ru) "склепы – под церквями и кладбищами" else "crypts lie under churches and graveyards"
+        kind == "room:MERCHANT" -> if (ru) "торговцы сидят под магазинами" else "merchants sit under shops"
+        kind == "room:SPRING" -> if (ru) "источники бьют под фонтанами" else "springs well up under fountains"
+        kind == "stuff:crystal" -> if (ru) "кристаллы – с третьего этажа" else "crystals: from floor three down"
+        else -> ""
+    }
+
+    fun toJson(): org.json.JSONObject = org.json.JSONObject().put("i", id).put("k", kind).put("n", n).put("c", coins).put("s", stuffId).put("sn", stuffN).put("x", xp)
+
+    companion object {
+        fun fromJson(o: org.json.JSONObject) = Contract(o.getLong("i"), o.getString("k"), o.getInt("n"), o.getInt("c"), o.getString("s"), o.getInt("sn"), o.getInt("x"))
+    }
+}
+
+/** Depth stake: what everything carried up is multiplied by. */
+fun depthMult(maxDepth: Int): Double = (1 + .25 * (maxDepth - 1)).coerceAtMost(4.0)

@@ -95,6 +95,15 @@ class Run(
     val steps = ArrayList<Float>()
     /** Minutes the torch lost to crawling through rubble. */
     var burnt = 0
+    /** Counters for the guild's orders: depth, beaten, tamed, metres, room:KIND, stuff:id. */
+    val prog = HashMap<String, Int>()
+    /** The expedition's journal: quiet news, Russian and English, newest last. */
+    val notes = ArrayList<Tx>()
+    /** The weather and hour fixed at the descent, so the floors don't change under the hero. */
+    var night = false
+    var rain = false
+
+    fun note(t: Tx) { notes += t; while (notes.size > 40) notes.removeAt(0) }
 
     fun toJson(): JSONObject = JSONObject().put("seed", seed).put("depth", depth).put("fs", floorStart).put("st", started).put("te", torchEnd)
         .put("tm", torchMin).put("hp", hp).put("ex", JSONArray(explored.toList())).put("se", JSONArray(seen.toList()))
@@ -102,6 +111,7 @@ class Run(
         .put("c", coins).put("bag", JSONArray(bag.map { it.toJson() })).put("stuff", JSONObject(stuff as Map<*, *>))
         .put("bl", JSONArray(blessings)).put("ch", chase?.toJson()).put("md", maxDepth).put("bt", beaten).put("rm", rooms).put("mp", mapped)
         .put("tr", JSONArray(trail)).put("sp", JSONArray(steps.map { it.toDouble() })).put("bu", burnt)
+        .put("ni", night).put("ra", rain).put("pg", JSONObject(prog as Map<*, *>)).put("nt", JSONArray(notes.map { JSONArray(listOf(it.ru, it.en)) }))
 
     companion object {
         private fun ints(a: JSONArray?) = a?.let { (0 until it.length()).map { i -> it.getInt(i) } } ?: emptyList()
@@ -118,6 +128,9 @@ class Run(
             o.optJSONArray("tr")?.let { a -> for (i in 0 until a.length()) r.trail += a.getDouble(i) }
             o.optJSONArray("sp")?.let { a -> for (i in 0 until a.length()) r.steps += a.getDouble(i).toFloat() }
             r.burnt = o.optInt("bu")
+            r.night = o.optBoolean("ni"); r.rain = o.optBoolean("ra")
+            o.optJSONObject("pg")?.let { p -> p.keys().forEach { k -> r.prog[k] = p.getInt(k) } }
+            o.optJSONArray("nt")?.let { a -> for (i in 0 until a.length()) a.optJSONArray(i)?.let { t -> r.notes += Tx(t.getString(0), t.getString(1)) } }
         }
     }
 }
@@ -172,6 +185,10 @@ class GameState(
     var tutorial = 0
     /** Pages whose first-visit hint was read. */
     val hints = HashSet<String>()
+    /** The guild's board (renewed daily) and the orders taken for the next expedition. */
+    val board = ArrayList<Contract>()
+    var boardDay = -1L
+    val taken = ArrayList<Contract>()
 
     fun level(b: String) = buildings[b] ?: 0
     fun has(s: String) = (stuff[s] ?: 0) > 0
@@ -185,6 +202,7 @@ class GameState(
         .put("pet", companion).put("deep", deepest).put("m", metres).put("logs", JSONArray(logs.map { it.toJson() }))
         .put("run", run?.toJson()).put("home", home?.let { JSONArray(listOf(it.lat, it.lon)) }).put("box", box?.let { JSONArray(it.toList()) })
         .put("uid", nextUid).put("tp", torchPick).put("vib", vibrate).put("tut", tutorial).put("hints", JSONArray(hints.toList()))
+        .put("board", JSONArray(board.map { it.toJson() })).put("bday", boardDay).put("taken", JSONArray(taken.map { it.toJson() }))
 
     companion object {
         fun fromJson(o: JSONObject) = GameState(o.getString("name"), o.getString("cls"), o.optBoolean("f")).also { s ->
@@ -203,6 +221,9 @@ class GameState(
             s.box = o.optJSONArray("box")?.let { a -> DoubleArray(4) { a.getDouble(it) } }
             s.nextUid = o.optLong("uid", 1); s.torchPick = o.optInt("tp", 30); s.vibrate = o.optBoolean("vib", true); s.tutorial = o.optInt("tut")
             o.optJSONArray("hints")?.let { a -> for (i in 0 until a.length()) s.hints += a.getString(i) }
+            o.optJSONArray("board")?.let { a -> for (i in 0 until a.length()) s.board += Contract.fromJson(a.getJSONObject(i)) }
+            s.boardDay = o.optLong("bday", -1)
+            o.optJSONArray("taken")?.let { a -> for (i in 0 until a.length()) s.taken += Contract.fromJson(a.getJSONObject(i)) }
         }
     }
 }
