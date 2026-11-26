@@ -23,7 +23,7 @@ Step outside, light the torch and go for a walk – while on the phone you go do
 - **The depth stake.** Each floor adds a quarter to coins and materials – if you come up alive through a well or by scroll. If the torch dies, half the loot stays below.
 - **Deep camps.** Beat the master of the fifth, tenth or fifteenth floor and the next descent can start from a camp below it.
 - **Long progression.** Four classes, twenty levels with skill pairs to choose from; gear with rarities and affixes; six camp buildings with ten levels each; daily guild orders.
-- **80 hand-drawn creatures** in the bestiary, some of which can be tamed with a treat and follow you.
+- **80 creatures** in the bestiary, some of which can be tamed with a treat and follow you.
 - **A chronicle** of every expedition with its route, depth and loot. English and Russian.
 
 ## Install
