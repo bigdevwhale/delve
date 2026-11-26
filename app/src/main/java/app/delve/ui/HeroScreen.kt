@@ -49,11 +49,13 @@ fun HeroScreen(c: AppContainer) {
     var pick by remember { mutableStateOf<Long?>(null) }
     var help by remember { mutableStateOf<Int?>(null) }
     var look by remember { mutableStateOf(false) }
+    var tab by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(0) }
     val cls = heroClass(s.cls)
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding().padding(horizontal = 16.dp)) {
-            Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.Bottom) {
+            PageTop(c, "hero")
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                 Box {
                     Pic(Art.hero(s.cls, s.female), Modifier.size(150.dp).clickable { look = true })
                     Text("✎", style = T.Heading.copy(color = C.paper), modifier = Modifier.align(Alignment.BottomEnd).clip(CircleShape).background(C.ink).clickable { look = true }.padding(horizontal = 9.dp, vertical = 2.dp))
@@ -82,60 +84,64 @@ fun HeroScreen(c: AppContainer) {
             }
             Text(w(ru, "Нажми на число, чтобы узнать, на что оно влияет.", "Tap a number to see what it does."), style = T.Small, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
 
-            Heading(w(ru, "надето", "worn"), w(ru, "Снаряжение", "Gear"))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                for (slot in Slot.entries) {
-                    val it = s.equippedIn(slot)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        ItemTile(it, size = 72.dp) { it?.let { x -> pick = x.uid } }
-                        Text(slotName(slot, ru), style = T.Small)
+            Gap(14.dp)
+            SubTabs(listOf(w(ru, "Снаряжение", "Gear"), w(ru, "Умения", "Skills") + if (c.game.skillChoices(s).isNotEmpty()) " ✦" else ""), tab) { tab = it }
+            if (tab == 0) {
+                Heading(w(ru, "надето", "worn"), w(ru, "Снаряжение", "Gear"))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    for (slot in Slot.entries) {
+                        val it = s.equippedIn(slot)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            ItemTile(it, size = 72.dp) { it?.let { x -> pick = x.uid } }
+                            Text(slotName(slot, ru), style = T.Small)
+                        }
                     }
                 }
-            }
-            val bag = s.gear.filter { g -> s.equipped[g.slot] != g.uid }
-            if (bag.isNotEmpty()) {
-                Gap(14.dp)
-                Text(w(ru, "В СУНДУКЕ", "IN THE CHEST"), style = T.Eyebrow)
-                Gap(6.dp)
+                val bag = s.gear.filter { g -> s.equipped[g.slot] != g.uid }
+                if (bag.isNotEmpty()) {
+                    Gap(14.dp)
+                    Text(w(ru, "В СУНДУКЕ", "IN THE CHEST"), style = T.Eyebrow)
+                    Gap(6.dp)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (it in bag) ItemTile(it, size = 62.dp) { pick = it.uid }
+                    }
+                }
+
+                val tamed = s.lore.filter { it.value.tamed }.keys.map { beast(it) }
+                Heading(w(ru, "кто пойдёт с тобой", "who walks with you"), w(ru, "Спутники", "Companions"))
+                if (tamed.isEmpty()) Text(w(ru, "Пока никого. Угости существо лакомством – некоторые идут следом.", "No one yet. Offer a creature a treat: some will follow."), style = T.Note, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (it in bag) ItemTile(it, size = 62.dp) { pick = it.uid }
-                }
-            }
-
-            Heading(w(ru, "по одному на выбор", "one of each pair"), w(ru, "Умения", "Skills"))
-            Text(w(ru, "На уровнях 2, 4, 6, 8 и 10 открывается пара умений. Выбери одно – второе закроется навсегда.", "At levels 2, 4, 6, 8 and 10 a pair of skills opens. Choose one: the other closes for good."),
-                style = T.Small, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            cls.tiers.forEachIndexed { i, (a, b) ->
-                val lv = SKILL_LEVELS[i]
-                val open = s.level >= lv
-                val chosen = listOf(a, b).firstOrNull { it.id in s.skills }
-                val can = open && chosen == null
-                if (i > 0) FadeRule()
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
-                    SkillMedal(a, ru, chosen?.id == a.id, chosen != null, open, can, Modifier.weight(1f)) { c.learn(a.id) }
-                    LevelKnot(lv, open, ru)
-                    SkillMedal(b, ru, chosen?.id == b.id, chosen != null, open, can, Modifier.weight(1f)) { c.learn(b.id) }
-                }
-                if (can) Text(w(ru, "✦ Выбери одно из двух", "✦ Choose one of the two"), style = T.Note.copy(color = C.gold), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-            }
-
-            val tamed = s.lore.filter { it.value.tamed }.keys.map { beast(it) }
-            Heading(w(ru, "кто пойдёт с тобой", "who walks with you"), w(ru, "Спутники", "Companions"))
-            if (tamed.isEmpty()) Text(w(ru, "Пока никого. Угости существо лакомством – некоторые идут следом.", "No one yet. Offer a creature a treat: some will follow."), style = T.Note, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (b in tamed) {
-                    val on = s.companion == b.id
-                    Column(Modifier.size(104.dp, 150.dp).paper(if (on) C.floor else C.paper, ink = if (on) C.gold else C.ink).clickable { c.pet(if (on) null else b.id) }.padding(6.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally) {
-                        Pic(Art.beast(b.id), Modifier.size(70.dp))
-                        Text(b.name(ru), style = T.Small.copy(color = C.ink), textAlign = TextAlign.Center, maxLines = 2)
-                        b.pet?.let { ModIcons(it, ru, center = true, color = C.green) }
+                    for (b in tamed) {
+                        val on = s.companion == b.id
+                        Column(Modifier.size(104.dp, 150.dp).paper(if (on) C.floor else C.paper, ink = if (on) C.gold else C.ink).clickable { c.pet(if (on) null else b.id) }.padding(6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally) {
+                            Pic(Art.beast(b.id), Modifier.size(70.dp))
+                            Text(b.name(ru), style = T.Small.copy(color = C.ink), textAlign = TextAlign.Center, maxLines = 2)
+                            b.pet?.let { ModIcons(it, ru, center = true, color = C.green) }
+                        }
                     }
                 }
+            } else {
+                Heading(w(ru, "по одному на выбор", "one of each pair"), w(ru, "Умения", "Skills"))
+                Text(w(ru, "Каждые два уровня, до двадцатого, открывается пара умений. Выбери одно – второе закроется навсегда.", "Every two levels, up to the twentieth, a pair of skills opens. Choose one: the other closes for good."),
+                    style = T.Small, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                cls.tiers.forEachIndexed { i, (a, b) ->
+                    val lv = SKILL_LEVELS[i]
+                    val open = s.level >= lv
+                    val chosen = listOf(a, b).firstOrNull { it.id in s.skills }
+                    val can = open && chosen == null
+                    if (i > 0) FadeRule()
+                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
+                        SkillMedal(a, ru, chosen?.id == a.id, chosen != null, open, can, Modifier.weight(1f)) { c.learn(a.id) }
+                        LevelKnot(lv, open, ru)
+                        SkillMedal(b, ru, chosen?.id == b.id, chosen != null, open, can, Modifier.weight(1f)) { c.learn(b.id) }
+                    }
+                    if (can) Text(w(ru, "✦ Выбери одно из двух", "✦ Choose one of the two"), style = T.Note.copy(color = C.gold), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                }
+
             }
             Gap(30.dp)
         }
-        HelpButton(c, "hero", Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp))
         pick?.let { uid -> s.gear.firstOrNull { it.uid == uid }?.let { ItemSheet(c, it, ru) { pick = null } } ?: run { pick = null } }
         help?.let { i ->
             val (name, text) = app.delve.domain.STAT_HELP[i]

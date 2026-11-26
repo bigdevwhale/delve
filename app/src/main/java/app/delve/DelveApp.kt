@@ -22,6 +22,7 @@ import app.delve.domain.Battle
 import app.delve.domain.Move
 import app.delve.domain.Tx
 import app.delve.domain.Recipe
+import app.delve.domain.RoomKind
 import app.delve.domain.Weather
 import app.delve.domain.metres
 import app.delve.work.Buzz
@@ -186,9 +187,9 @@ class AppContainer(context: Context) {
         val run = state?.run
         for (e in all.filter(::quiet)) {
             when (e) {
-                is Ev.News -> run?.note(Tx(joined(e.title.ru, e.text.ru), joined(e.title.en, e.text.en)))
-                is Ev.LevelUp -> run?.note(Tx("Новый уровень: ${e.level}!", "New level: ${e.level}!"))
-                is Ev.Fought -> run?.note(Tx("${e.foe.beast.name.ru} отстал. +${e.coins} монет", "${e.foe.beast.name.en} gave up. +${e.coins} coins"))
+                is Ev.News -> run?.note(Tx(joined(e.title.ru, e.text.ru), joined(e.title.en, e.text.en)), if (e.kind == RoomKind.EMPTY) "item_21" else "room_${e.kind.art}")
+                is Ev.LevelUp -> run?.note(Tx("Новый уровень: ${e.level}!", "New level: ${e.level}!"), "item_45")
+                is Ev.Fought -> run?.note(Tx("${e.foe.beast.name.ru} отстал. +${e.coins} монет", "${e.foe.beast.name.en} gave up. +${e.coins} coins"), "beast_${e.foe.beast.id}")
                 else -> Unit
             }
         }

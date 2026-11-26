@@ -63,6 +63,7 @@ import app.delve.domain.Floor
 import app.delve.domain.RoomKind
 import app.delve.domain.Run
 import app.delve.domain.beast
+import app.delve.domain.stake
 import app.delve.ui.art.MapInk
 import app.delve.ui.art.MapPainter
 import app.delve.ui.art.MapScene
@@ -203,18 +204,19 @@ fun DungeonScreen(c: AppContainer, onBag: () -> Unit) {
         Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Hud(run.depth, left = c.game.torchLeft(run, now), total = run.torchMin.toDouble(), hp = run.hp, maxHp = stats.maxHp, ru = ru)
             Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
-                Text("${w(ru, "Этаж", "Floor")} ${run.depth} · ${floorName(run.depth, ru)}" + if (run.maxDepth > 1) "  ·  ×" + "%.2f".format(app.delve.domain.depthMult(run.maxDepth)).trimEnd('0').trimEnd(',', '.') else "", style = T.Heading.copy(fontSize = T.Heading.fontSize),
+                Text("${w(ru, "Этаж", "Floor")} ${run.depth} · ${floorName(run.depth, ru)}" + if (run.stake() > 1) "  ·  ×" + fmt(run.stake()) else "", style = T.Heading.copy(fontSize = T.Heading.fontSize),
                     modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(C.paper.copy(alpha = .86f)).border(1.dp, C.ink.copy(alpha = .5f), RoundedCornerShape(20.dp)).padding(horizontal = 14.dp, vertical = 3.dp))
             }
         }
 
         ToastLayer(c, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 112.dp, start = 12.dp, end = 12.dp))
-        HelpButton(c, "dungeon", Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 198.dp, end = 24.dp))
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(12.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                 Canvas(Modifier.size(130.dp, 34.dp)) { drawIntoCanvas { ink.scale(it.nativeCanvas, 8 * density, size.height - 10 * density, zoom * density, ru) } }
                 Box(Modifier.weight(1f))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    HelpButton(c, "dungeon")
+                    Gap(6.dp)
                     RoundBtn("+") { zoom = (zoom * 1.4f).coerceAtMost(7f) }
                     Gap(6.dp)
                     RoundBtn("−") { zoom = (zoom / 1.4f).coerceAtLeast(1.2f) }

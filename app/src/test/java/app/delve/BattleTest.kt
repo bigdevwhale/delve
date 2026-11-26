@@ -46,3 +46,22 @@ class BattleTest {
         }
     }
 }
+
+class ProgressTest {
+    @Test
+    fun deepCampsAndDrops() {
+        val g = Game()
+        val s = g.newGame("T", "mage", false)
+        assertTrue(app.delve.domain.heroClass("mage").tiers.size == 10)
+        // a beaten fifth-floor master opens floor 6; the next descent may start there, the stake counts from it
+        s.camps += app.delve.domain.campDepth(5); s.startDepth = 6
+        val run = g.startRun(s, 0, 30, 0L, 1L)
+        assertTrue(run.depth == 6 && run.from == 6)
+        run.maxDepth = 8
+        assertTrue(kotlin.math.abs(app.delve.domain.depthMult(3) - 1.5) < 1e-9)
+        // deep kinds never drop on the first floors
+        val r = java.util.Random(3)
+        repeat(300) { assertTrue(app.delve.domain.base(g.newItem(s, r, 1, 0).base).min <= 1) }
+        assertTrue((1..300).any { app.delve.domain.base(g.newItem(s, r, 9, 0).base).min > 1 })
+    }
+}

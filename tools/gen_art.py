@@ -150,6 +150,73 @@ SKILLS = [
 ]
 
 
+ITEMS2 = [  # order = the bases added after "crystal" in domain/Content.kt (EXTRA_BASES), art 46..61
+    "a slender rapier with a swept hilt", "a heavy two-handed war hammer", "a small wooden crossbow", "a spiked flail on a chain",
+    "a short magic wand with a glowing tip", "a shirt of overlapping scale armour", "a padded quilted gambeson jacket", "a tall wooden tower shield with iron bands",
+    "an iron helmet with two curved horns", "a pair of leather and iron gauntlets", "a silver bracelet with small gems", "a smooth stone talisman carved with a glowing rune",
+    "a brass pocket watch on a chain", "a feather charm on a leather cord", "a glass jar full of glowing fireflies", "a miner's leather helmet with an oil lamp on the front",
+]
+SKILLS2 = [  # order = skills in EXTRA_TIERS (domain/Content.kt): warrior, ranger, rogue, mage; first then second per tier
+    "an iron heart on an anvil", "two crossed battle axes", "a stone castle tower", "a burning red war banner",
+    "a pair of marching boots on a winding road", "a field medic satchel with a red cross-shaped flower", "a heavy iron chest overflowing with gold", "a granite boulder that cannot be cracked",
+    "a golden laurel wreath around a sword", "a champion's golden belt buckle",
+    "a soaring falcon", "an animal trail of paw prints into a forest", "two arrows flying side by side", "a cloak fading into leaves",
+    "a constellation of stars in a night sky", "a spare candle wick coiled with a match", "an old treasure map with an X", "a kite flying in the wind",
+    "an oak tree with a shield-shaped crown", "an arrow splitting another arrow in a target",
+    "a ring of many keys", "a felt slipper sneaking", "a dagger dripping green poison", "a ghostly cloak floating",
+    "a pair of golden hands", "a hooded merchant's scale in shadow", "a black cat with a lucky coin", "a mask and a vanishing puff of smoke",
+    "a thieves' crown made of lock picks", "a dagger striking from a shadow",
+    "a crescent moon over a lantern", "a glowing flask of life potion", "a lightning bolt", "a shimmering magic shield of runes",
+    "an hourglass with glowing sand", "a crystal ball with stars inside", "a crackling thunder orb", "an everburning oil lamp",
+    "an old sage's book with a candle", "a phoenix flame in a brazier",
+]
+
+
+# order = BEASTS2 in domain/Content.kt
+BEASTS2 = [
+    ("mousebard", "a tiny mouse bard with a lute made from a walnut shell"),
+    ("sockgoblin", "a goblin wearing odd socks on its ears, carrying a bundle of lost socks"),
+    ("lampmoth", "a big fluffy moth with lantern-like glowing wing spots"),
+    ("puddlefrog", "a frog in a little paper boat hat sitting in a puddle"),
+    ("pigeonknight", "a city pigeon wearing a bottle-cap helmet and holding a toothpick lance"),
+    ("drainimp", "a small imp climbing out of a drain grate, soot-covered, grinning"),
+    ("tincan", "a living tin can creature on spring legs with a pull-tab mouth"),
+    ("cobweb", "a ball of grey cobwebs with two bright eyes and dust bunnies around it"),
+    ("bellghost", "a ghost wearing a small church bell as a hood, ringing softly"),
+    ("gravedigger", "a skeleton gravedigger with a shovel and a straw hat, exactly two arms"),
+    ("mourner", "a weeping wraith in a long veil holding a wilted flower bouquet"),
+    ("ossuary", "a pile of skulls stacked into a little tower with a candle on top"),
+    ("crowkeeper", "a crow in a black cloak holding a small iron key in its beak"),
+    ("lichling", "a tiny lich child in a too-big crown playing with a glowing marble"),
+    ("sporecap", "a tall slender mushroom with a lantern cap glowing purple"),
+    ("beetle", "a large shiny rhinoceros beetle with moss on its back"),
+    ("rootling", "a little creature made of tangled tree roots with a sprout on its head"),
+    ("glowworm", "a long glowworm curled like a necklace of light"),
+    ("fungalbear", "a small bear covered in shelf mushrooms, sleepy"),
+    ("pixie", "a cave pixie with dragonfly wings holding a dewdrop lantern, exactly two arms"),
+    ("pikeeel", "a toothy pike fish with whiskers wearing a tiny captain's cap"),
+    ("selkie", "a seal pup with a glowing pearl collar"),
+    ("ferryman", "a hooded ferryman in a small boat with a pole, a lantern on the bow, exactly two arms"),
+    ("jellyfish", "a pale glowing jellyfish floating in dark water"),
+    ("snapturtle", "an old snapping turtle with a mossy shell and a grumpy face"),
+    ("kraken", "a small kraken peeking out of a manhole with three tentacles"),
+    ("ironmole", "a mole wearing an iron diving helmet and riveted claws"),
+    ("lavaslug", "a slug made of glowing orange lava with a crusty rock shell"),
+    ("mirror", "a living ornate mirror on legs reflecting a grinning face"),
+    ("clockwork", "a clockwork knight with a big wind-up key in its back, exactly two arms"),
+    ("bonedragon", "a small skeleton dragon with ragged wings"),
+    ("echo", "a translucent blue echo spirit shaped like several overlapping faces"),
+    ("geode", "a crystal geode turtle with amethyst spikes on its shell"),
+    ("stormimp", "an imp crackling with blue lightning sitting on a thundercloud"),
+    ("gloomowl", "a large owl with glowing violet eyes and feathers like smoke"),
+    ("rustgolem", "a golem made of rusty pipes and gears with steam vents, exactly two arms"),
+    ("abyssfish", "a deep-sea anglerfish swimming in air with a glowing lure"),
+    ("tramghost", "the ghost of an old tram rattling along floating rails"),
+    ("queenmoth", "a huge regal moth queen with patterned wings and a tiny crown"),
+    ("heartstone", "the heart of the city: a giant glowing crystal heart wrapped in roots and old pipes"),
+]
+
+
 def banner(desc):
     return (HEAD + "Image: a wide banner illustration for a cozy fantasy walking game, " + desc + "\n" + INK
             + " Wide panorama, aspect ratio 3:1. No people, no creatures, no letters, numbers or text anywhere.")
@@ -171,6 +238,19 @@ JOBS = {
     "skills2": sheet(4, 4, "16 skill emblems", SKILLS[16:32], OBJ, "Each emblem is a single bold symbolic object, no frame, no circle behind it. "),
     "skills3": sheet(4, 2, "8 skill emblems", SKILLS[32:40], OBJ, "Each emblem is a single bold symbolic object, no frame, no circle behind it. "),
     "banner_descent": HEAD + "Image: an illustration for a cozy fantasy walking game: at night in an old town courtyard, a heavy round iron hatch lies open in the cobblestones; worn stone steps spiral down into darkness; warm orange torchlight glows up from below; a lantern stands on the cobbles beside the hatch; thin mist; a lamppost and house walls faintly in the background. " + INK + " Landscape, aspect ratio 2:1. No people, no creatures, no letters, numbers or text anywhere.",
+    # single redraws of one creature (cut.py prefers them over the sheet cell)
+    "beast_spider": HEAD + "Image: one creature for a cozy fantasy walking game: a round hairy brown spider sitting and knitting a small web scarf with two long straight knitting needles held in two front legs; the needles are perfectly straight, smooth, parallel-ish wooden rods with round knobs at the ends, crossing neatly; a ball of grey yarn beside it. " + INK + " Centered, full body, on a flat solid pure magenta (#FF00FF) background, nothing touching the edges. No text, no frame.",
+    "items4": sheet(4, 4, "16 adventurer's items", ITEMS2, OBJ),
+    "skills4": sheet(4, 4, "16 skill emblems", SKILLS2[:16], OBJ, "Each emblem is a single bold symbolic object, no frame, no circle behind it. "),
+    "skills5": sheet(4, 4, "16 skill emblems", SKILLS2[16:32], OBJ, "Each emblem is a single bold symbolic object, no frame, no circle behind it. "),
+    "skills6": sheet(4, 2, "8 skill emblems", SKILLS2[32:40], OBJ, "Each emblem is a single bold symbolic object, no frame, no circle behind it. "),
+    "camp_depth": HEAD + "Image: one vignette for a cozy fantasy walking game: an underground adventurers' resting camp deep in a cave: a small campfire, a bedroll, a rope ladder going up into darkness, a wooden sign post with no letters, glowing mushrooms. " + INK + " Centered, on a flat solid pure magenta (#FF00FF) background, nothing touching the edges. No people, no creatures, no text.",
+    "beasts4": sheet(4, 4, "16 dungeon creatures", [d for _, d in BEASTS2[:16]]),
+    "beasts5": sheet(4, 4, "16 dungeon creatures", [d for _, d in BEASTS2[16:32]]),
+    "beasts6": sheet(4, 2, "8 dungeon creatures", [d for _, d in BEASTS2[32:40]]),
+    "banner_chronicle": banner("an adventurers' chronicle room: a big wooden desk with an open journal full of sketched dungeon maps, a quill and ink, candles, rolled maps, a shelf of trophies from below: a skull, a crystal, a pearl, a rusty key, warm candlelight."),
+    "banner_bag": banner("an adventurer's worn leather satchel lying open on a stone dungeon floor, loot spilling out: gold coins, a red potion, a rolled scroll, a glowing crystal, mushrooms, a pearl, a key; a burning torch leaning beside it, warm light."),
+    "banner_shrine": banner("a small underground shrine: a stone altar with many burning candles, a bell, wax drips, offerings of coins and flowers, soft golden glow in the dark."),
     "banner_deep": banner("a cross-section under a town street: houses and a lamppost on top, then layers of earth, old sewer brick tunnels, a crypt, a mushroom cave and an underground river going deeper and deeper."),
 }
 

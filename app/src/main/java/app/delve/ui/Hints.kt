@@ -35,6 +35,7 @@ fun hint(key: String, ru: Boolean): Hint = when (key) {
         w(ru, "Выбери, на сколько хватит факела, – это время прогулки.", "Choose how long the torch lasts: that's how long you'll walk."),
         w(ru, "Выйди на улицу и нажми «Зажечь факел»: подземелье строится из улиц вокруг тебя.", "Go outside and tap «Light the torch»: the dungeon is built from the streets around you."),
         w(ru, "Добыча идёт на постройки: кузница точит оружие, алхимик варит зелья, картограф учит видеть дальше.", "Loot goes into buildings: the forge sharpens weapons, the alchemist brews potions, the cartographer helps you see farther."),
+        w(ru, "Победи хозяина пятого, десятого или пятнадцатого этажа – и следующий спуск можно начать со стоянки ниже него.", "Beat the master of the fifth, tenth or fifteenth floor and the next descent can start from a camp below it."),
     ))
     "dungeon" -> Hint(w(ru, "Под городом", "Under the town"), listOf(
         w(ru, "Иди по настоящим улицам. Каждый перекрёсток – зал: в нём сундук, ловушка, источник или чудовище.", "Walk the real streets. Every crossing is a hall: a chest, a trap, a spring or a creature."),
@@ -46,7 +47,7 @@ fun hint(key: String, ru: Boolean): Hint = when (key) {
     "hero" -> Hint(w(ru, "Герой", "The hero"), listOf(
         w(ru, "Наверху – числа героя: от них зависят бой, погоня и свет фонаря.", "At the top are your numbers: they decide fights, chases and how far your light reaches."),
         w(ru, "Нажми на вещь, чтобы надеть её или продать.", "Tap a thing to wear it or sell it."),
-        w(ru, "На уровнях 2, 4, 6, 8 и 10 открывается пара умений – выбери одно из двух.", "At levels 2, 4, 6, 8 and 10 a pair of skills opens: pick one of the two."),
+        w(ru, "Каждые два уровня, до двадцатого, открывается пара умений – выбери одно из двух.", "Every two levels, up to the twentieth, a pair of skills opens: pick one of the two."),
         w(ru, "Приручённые существа становятся спутниками. Возьми одного с собой – он даст свою силу.", "Tamed creatures become companions. Take one along and it lends you its gift."),
     ))
     "beasts" -> Hint(w(ru, "Бестиарий", "The bestiary"), listOf(
@@ -98,3 +99,9 @@ fun HelpButton(c: AppContainer, key: String, modifier: Modifier = Modifier, dark
 }
 
 @Suppress("unused") private val shape = RoundedCornerShape(12.dp)
+
+/** A slim top row of a page with its «?» at the right, so the button never sits over the content. */
+@Composable
+fun PageTop(c: AppContainer, key: String) {
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End) { HelpButton(c, key) }
+}

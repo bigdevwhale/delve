@@ -31,7 +31,8 @@ sealed class Ev {
     class Shrine(val node: Int, val offer: List<Int>) : Ev()
     class LevelUp(val level: Int) : Ev()
     /** The expedition is over: what came home, at what depth stake, and which orders paid. */
-    class Ended(val log: RunLog, val lost: Boolean, val mult: Double = 1.0, val done: List<Contract> = emptyList()) : Ev()
+    class Ended(val log: RunLog, val lost: Boolean, val mult: Double = 1.0, val done: List<Contract> = emptyList(),
+                val items: List<Item> = emptyList(), val stuff: Map<String, Int> = emptyMap()) : Ev()
 }
 
 /** A fight in rounds: the creature shows what it means to do, the hero answers with a move. */
@@ -110,7 +111,9 @@ class Game {
 
     fun startRun(s: GameState, start: Int, minutes: Int, now: Long, seed: Long): Run {
         val st = stats(s, null)
-        val run = Run(seed, 1, start, now, now + (minutes + st.torch) * 60_000L, minutes + st.torch, st.maxHp)
+        val depth = if (s.startDepth in s.camps) s.startDepth else 1
+        val run = Run(seed, depth, start, now, now + (minutes + st.torch) * 60_000L, minutes + st.torch, st.maxHp)
+        run.from = depth; run.maxDepth = depth
         s.run = run
         return run
     }
@@ -154,7 +157,7 @@ class Game {
             val f = foe(beast(ch.beast), run.depth, false)
             val r = rnd(run, 5)
             val (coins, items, stuff) = spoils(s, f, r)
-            lore(s, f.beast.id).beaten++
+            lore(s, f.beast.id).beaten++; camp(s, f)
             run.beaten++; run.prog.merge("beaten", 1, Int::plus)
             gainXp(s, f.xp, out)
             out += Ev.Fought(f, true, listOf(Tx("${f.beast.name.ru} выдохся и отстал.", "${f.beast.name.en} ran out of breath and gave up.")), 0, coins, items, stuff, false)
@@ -162,6 +165,12 @@ class Game {
     }
 
     private fun lore(s: GameState, id: String) = s.lore.getOrPut(id) { Lore() }
+
+    /** Beating a floor's master opens a camp on the floor below: later descents may start there. */
+    private fun camp(s: GameState, f: Foe) {
+        val run = s.run ?: return
+        if (f.boss) s.camps += campDepth(run.depth)
+    }
 
     /** The hero stepped into a room. */
     fun enter(s: GameState, f: Floor, node: Int, now: Long, cond: Conditions, out: MutableList<Ev>) {
@@ -312,13 +321,13 @@ class Game {
     }
 
     fun newItem(s: GameState, r: Random, depth: Int, luck: Int, slot: Slot? = null): Item {
-        val pool = if (slot == null) BASES else BASES.filter { it.slot == slot }
+        val pool = BASES.filter { it.min <= depth && (slot == null || it.slot == slot) }
         val b = pool[r.nextInt(pool.size)]
         val roll = r.nextInt(100) + luck * 2 + depth * 2
         val rar = when { roll >= 112 -> Rarity.LEGEND; roll >= 92 -> Rarity.RARE; roll >= 62 -> Rarity.FINE; else -> Rarity.COMMON }
         val nAff = when (rar) { Rarity.COMMON -> 0; Rarity.FINE -> 1; Rarity.RARE -> 1 + r.nextInt(2); Rarity.LEGEND -> 2 }
         val aff = AFFIXES.shuffled(r).take(nAff).map { it.id }
-        return Item(s.nextUid++, b.id, (1 + depth / 2).coerceAtMost(10), rar, aff)
+        return Item(s.nextUid++, b.id, (1 + depth / 2).coerceAtMost(15), rar, aff)
     }
 
     private fun chest(s: GameState, r: Random, mult: Double): Triple<Int, List<Item>, Map<String, Int>> {
@@ -388,7 +397,7 @@ class Game {
         if (foeHp <= 0) {
             run.resolved += node
             val (coins, items, stuff) = spoils(s, f, r)
-            lore(s, f.beast.id).beaten++; run.beaten++; run.prog.merge("beaten", 1, Int::plus)
+            lore(s, f.beast.id).beaten++; camp(s, f); run.beaten++; run.prog.merge("beaten", 1, Int::plus)
             gainXp(s, f.xp, out)
             out.add(0, Ev.Fought(f, true, log, lost, coins, items, stuff, false))
         } else if (run.hp > 0) {
@@ -540,14 +549,17 @@ class Game {
         // the depth stake: what is carried up alive is multiplied; lost in the dark, half stays below and no stake
         // leaving early on purpose keeps everything, but neither the stake nor the orders pay
         val leave = how == "leave"
-        val mult = if (lost || leave) 1.0 else depthMult(run.maxDepth)
+        val mult = if (lost || leave) 1.0 else depthMult(run.maxDepth - run.from + 1)
         val keep = if (lost) run.bag.filterIndexed { i, _ -> i % 2 == 0 } else run.bag
         s.gear += keep
         val coins = if (lost) run.coins / 2 else (run.coins * mult).roundToInt()
         s.coins += coins
+        val brought = LinkedHashMap<String, Int>()
         for ((k, v) in run.stuff) {
             val material = stuff(k)?.material == true
-            s.stuff.merge(k, if (lost) v / 2 else if (material) (v * mult).roundToInt() else v, Int::plus)
+            val n = if (lost) v / 2 else if (material) (v * mult).roundToInt() else v
+            s.stuff.merge(k, n, Int::plus)
+            if (n > 0) brought[k] = n
         }
         s.deepest = max(s.deepest, run.maxDepth)
         run.prog["depth"] = run.maxDepth
@@ -564,7 +576,7 @@ class Game {
         s.logs.add(0, log)
         while (s.logs.size > 60) s.logs.removeAt(s.logs.size - 1)
         s.run = null
-        return Ev.Ended(log, lost, mult, done)
+        return Ev.Ended(log, lost, mult, done, keep.toList(), brought)
     }
 
     // ——— the fight in rounds ———
@@ -653,7 +665,7 @@ class Game {
         if (b.hp <= 0) {
             run.resolved += b.node
             val (coins, items, stuff) = spoils(s, f, r)
-            lore(s, f.beast.id).beaten++; run.beaten++; run.prog.merge("beaten", 1, Int::plus)
+            lore(s, f.beast.id).beaten++; camp(s, f); run.beaten++; run.prog.merge("beaten", 1, Int::plus)
             gainXp(s, f.xp, out)
             out.add(0, Ev.Fought(f, true, b.log, b.lost, coins, items, stuff, false))
         } else if (run.hp > 0) {

@@ -68,10 +68,13 @@ data class Mods(
 
 class Skill(val id: String, val name: Tx, val mods: Mods)
 
-class HeroClass(val id: String, val name: Tx, val about: Tx, val mods: Mods, val tiers: List<Pair<Skill, Skill>>)
+class HeroClass(val id: String, val name: Tx, val about: Tx, val mods: Mods, private val base: List<Pair<Skill, Skill>>) {
+    /** The first five pairs, then the five that open after level 10. */
+    val tiers: List<Pair<Skill, Skill>> get() = base + (EXTRA_TIERS[id] ?: emptyList())
+}
 
 /** Levels at which a pair of skills opens. */
-val SKILL_LEVELS = listOf(2, 4, 6, 8, 10)
+val SKILL_LEVELS = listOf(2, 4, 6, 8, 10, 12, 14, 16, 18, 20)
 
 private fun sk(id: String, ru: String, en: String, m: Mods) = Skill(id, Tx(ru, en), m)
 
@@ -169,6 +172,47 @@ val BEASTS = listOf(
     b("spiderqueen", "Паучья королева", "Spider queen", Hab.BOSS, 15, 10, "Кружевная вуаль из паутины и маленькая корона. Очень вежлива.", "A lace veil of web and a tiny crown. Very polite."),
     b("olddragon", "Старый дракон", "Old dragon", Hab.BOSS, 20, 12, "Спит в ночном колпаке и очках. Проснувшись, ворчит про молодёжь.", "Sleeps in a nightcap and glasses. Wakes up grumbling about the young."),
     b("cityworm", "Червь под городом", "The worm beneath", Hab.BOSS, 25, 14, "Тот, кто прокладывал коридоры до трамвайных путей. Огромен и древен.", "The one who dug the corridors before the tram rails. Huge and ancient."),
+    // the second forty (tools/gen_art.py BEASTS2)
+    b("mousebard", "Мышь-менестрель", "Mouse minstrel", Hab.ANY, 1, 1, "Играет на лютне из ореховой скорлупы. Фальшивит, но с душой.", "Plays a lute made of a walnut shell. Off-key, but with feeling.", Mods(luck = 1)),
+    b("sockgoblin", "Носочный гоблин", "Sock goblin", Hab.ANY, 1, 1, "Вот куда пропадают носки из стирки. Он их коллекционирует.", "So that is where socks vanish from the wash. He collects them.", Mods(sell = 10)),
+    b("lampmoth", "Фонарная моль", "Lamp moth", Hab.ANY, 2, 2, "Летит на любой свет, особенно на твой факел.", "Flies at any light, especially your torch.", Mods(light = 15)),
+    b("puddlefrog", "Лягушка-лужица", "Puddle frog", Hab.ANY, 1, 1, "Носит шапку из газеты и живёт в любой луже после дождя.", "Wears a newspaper hat and lives in any puddle after rain.", Mods(heal = 10)),
+    b("pigeonknight", "Голубь-рыцарь", "Pigeon knight", Hab.ANY, 2, 2, "Шлем из пробки, копьё из зубочистки. Защищает свою крошку хлеба.", "A bottle-cap helmet and a toothpick lance. Guards his crumb of bread.", Mods(atk = 1)),
+    b("drainimp", "Чертёнок из стока", "Drain imp", Hab.ANY, 2, 2, "Вылезает из решётки ливнёвки, весь в саже, и очень доволен собой.", "Climbs out of a drain grate, all soot, very pleased with himself."),
+    b("tincan", "Жестянка", "Tin can", Hab.ANY, 3, 3, "Прыгает на пружинках и гремит. Подкрасться не умеет совсем.", "Hops on springs and rattles. Cannot sneak up at all.", Mods(def = 1)),
+    b("cobweb", "Пыльный клубок", "Dust bunny", Hab.ANY, 1, 1, "Клубок паутины с глазами. Живёт там, где давно не убирали.", "A ball of cobwebs with eyes. Lives where nobody has swept in years.", Mods(traps = 15)),
+    b("bellghost", "Колокольный призрак", "Bell ghost", Hab.CRYPT, 2, 2, "Носит колокол вместо капюшона и звонит, когда скучает.", "Wears a bell for a hood and rings it when bored."),
+    b("gravedigger", "Скелет-могильщик", "Skeleton gravedigger", Hab.CRYPT, 3, 3, "Соломенная шляпа, лопата и никакой спешки.", "A straw hat, a shovel and no hurry at all.", Mods(loot = 15)),
+    b("mourner", "Плакальщица", "Mourner", Hab.CRYPT, 4, 4, "Плачет над увядшим букетом. Если утешить, легче станет обоим.", "Weeps over a wilted bouquet. Comfort her and you both feel better.", Mods(heal = 25)),
+    b("ossuary", "Башня из черепов", "Skull tower", Hab.CRYPT, 5, 4, "Черепа сложились в башенку и держат свечу. Очень этим гордятся.", "Skulls stacked into a little tower holding a candle. Very proud of it."),
+    b("crowkeeper", "Ворон-ключник", "Crow keykeeper", Hab.CRYPT, 3, 3, "Носит в клюве ключ от склепа и никому его не отдаёт.", "Carries the crypt key in its beak and gives it to nobody.", Mods(traps = 20)),
+    b("lichling", "Личонок", "Lichling", Hab.CRYPT, 7, 5, "Маленький лич в короне не по размеру. Играет со светящимся шариком.", "A small lich in a crown too big for him. Plays with a glowing marble.", Mods(torch = 5)),
+    b("sporecap", "Фонарный гриб", "Lantern cap", Hab.GROTTO, 2, 2, "Высокий гриб, шляпка светится фиолетовым. Ходит медленно.", "A tall mushroom with a cap glowing violet. Walks slowly.", Mods(light = 20)),
+    b("beetle", "Жук-носорог", "Rhino beetle", Hab.GROTTO, 3, 3, "Блестящий, со мхом на спине. Таранит всё, что движется.", "Shiny, with moss on its back. Rams anything that moves.", Mods(def = 2)),
+    b("rootling", "Корешок", "Rootling", Hab.GROTTO, 1, 1, "Сплетён из корней, на макушке росток. Тянется к твоему факелу.", "Woven of roots, a sprout on top. Leans towards your torch.", Mods(heal = 15)),
+    b("glowworm", "Светящийся червячок", "Glowworm", Hab.GROTTO, 2, 1, "Свернулся ожерельем из света. Тихий и тёплый.", "Curled into a necklace of light. Quiet and warm.", Mods(light = 20)),
+    b("fungalbear", "Грибной медведь", "Fungal bear", Hab.GROTTO, 5, 5, "Весь в грибах-трутовиках и всегда сонный. Лучше не будить.", "Covered in shelf fungi and always sleepy. Better not wake him.", Mods(hp = 15)),
+    b("pixie", "Пещерная фея", "Cave pixie", Hab.GROTTO, 4, 3, "Крылья стрекозы, фонарик из капли росы. Любит дразниться.", "Dragonfly wings, a dewdrop lantern. Loves to tease.", Mods(luck = 2)),
+    b("pikeeel", "Щука-капитан", "Captain pike", Hab.RIVER, 2, 2, "Усатая щука в капитанской фуражке. Командует течением.", "A whiskered pike in a captain's cap. Orders the current about.", Mods(dmg = 1)),
+    b("selkie", "Тюленёнок", "Selkie pup", Hab.RIVER, 2, 2, "На шее светится жемчужина. Ныряет за ней снова и снова.", "A pearl glows at its neck. Dives after it again and again.", Mods(loot = 15)),
+    b("ferryman", "Перевозчик", "Ferryman", Hab.RIVER, 5, 4, "Возит через подземную реку за монетку. Или за хорошую историю.", "Ferries across the river below for a coin. Or for a good story.", Mods(chase = 15)),
+    b("jellyfish", "Бледная медуза", "Pale jellyfish", Hab.RIVER, 3, 3, "Плывёт в тёмной воде и светится. Жжётся, если тронуть.", "Drifts in the dark water, glowing. Stings if you touch it."),
+    b("snapturtle", "Кусачая черепаха", "Snapping turtle", Hab.RIVER, 4, 4, "Старая, ворчливая, вся во мху. Кусает за пятки.", "Old, grumpy and mossy. Bites at your heels.", Mods(def = 2)),
+    b("kraken", "Кракенёнок", "Little kraken", Hab.RIVER, 7, 6, "Выглядывает из люка тремя щупальцами. Остальных стесняется.", "Peeks out of a manhole with three tentacles. Shy about the rest."),
+    b("ironmole", "Железный крот", "Iron mole", Hab.DEEP, 6, 5, "Водолазный шлем и клёпаные когти. Роет сквозь что угодно.", "A diving helmet and riveted claws. Digs through anything.", Mods(loot = 20)),
+    b("lavaslug", "Лавовый слизень", "Lava slug", Hab.DEEP, 9, 6, "Тёплый, медленный и оставляет за собой застывший камень.", "Warm, slow, and leaves cooled stone behind."),
+    b("mirror", "Живое зеркало", "Living mirror", Hab.DEEP, 8, 6, "Показывает тебя, только ухмыляется шире.", "Shows you, only with a wider grin."),
+    b("clockwork", "Заводной рыцарь", "Clockwork knight", Hab.DEEP, 10, 7, "Тикает, пока не кончится завод. Ключ в спине лучше не трогать.", "Ticks until it runs down. Better leave the key in its back alone.", Mods(def = 3)),
+    b("bonedragon", "Костяной дракончик", "Bone wyrmling", Hab.DEEP, 12, 8, "Крылья в лохмотьях, но летает лучше живых.", "Its wings are in tatters, but it flies better than the living."),
+    b("echo", "Эхо", "Echo", Hab.DEEP, 11, 7, "Дух из нескольких лиц, повторяет каждое твоё слово.", "A spirit of several faces repeating every word you say.", Mods(chase = 20)),
+    b("geode", "Жеодовая черепаха", "Geode turtle", Hab.DEEP, 13, 8, "На панцире аметистовые шипы. Её обожают картографы.", "Amethyst spikes on its shell. Cartographers adore her.", Mods(def = 4)),
+    b("stormimp", "Грозовой чертёнок", "Storm imp", Hab.DEEP, 14, 9, "Сидит на тучке и искрит. Волосы встают дыбом.", "Sits on a little cloud and sparks. Your hair stands on end.", Mods(dmg = 4)),
+    b("gloomowl", "Сумрачная сова", "Gloom owl", Hab.DEEP, 16, 9, "Перья как дым, глаза фиолетовые. Видит в полной темноте.", "Feathers like smoke, violet eyes. Sees in total darkness.", Mods(light = 40)),
+    b("rustgolem", "Ржавый голем", "Rust golem", Hab.DEEP, 18, 10, "Собран из труб и шестерёнок, пыхтит паром. Старше водопровода.", "Made of pipes and gears, puffing steam. Older than the plumbing."),
+    b("abyssfish", "Удильщик бездны", "Abyss angler", Hab.DEEP, 20, 11, "Плавает прямо по воздуху и светит удочкой. Не иди на свет.", "Swims right through the air with its glowing lure. Do not follow the light."),
+    b("tramghost", "Призрачный трамвай", "Ghost tram", Hab.BOSS, 30, 15, "Последний трамвай, который так и не доехал до депо. Звенит в темноте.", "The last tram that never reached the depot. It rings in the dark."),
+    b("queenmoth", "Королева моли", "Moth queen", Hab.BOSS, 35, 16, "Огромная, в узорчатых крыльях и крошечной короне. Летит только на самый яркий свет.", "Huge, with patterned wings and a tiny crown. Flies only to the brightest light."),
+    b("heartstone", "Сердце города", "Heart of the town", Hab.BOSS, 40, 18, "Огромный светящийся кристалл, оплетённый корнями и трубами. Им бьётся весь город.", "A huge glowing crystal wrapped in roots and pipes. The whole town beats with it."),
 )
 
 fun beast(id: String) = BEASTS.firstOrNull { it.id == id } ?: BEASTS[0]
@@ -182,7 +226,8 @@ fun bossFor(depth: Int): Beast {
 enum class Slot { WEAPON, ARMOR, CHARM, LIGHT }
 
 /** A kind of gear: Russian grammatical gender for the adjectives ('m', 'f', 'n', 'p'), its numbers at tier 1, art index. */
-class Base(val id: String, val slot: Slot, val name: Tx, val g: Char, val mods: Mods, val art: Int)
+/** [min] is the shallowest floor where the kind starts to drop. */
+class Base(val id: String, val slot: Slot, val name: Tx, val g: Char, val mods: Mods, val art: Int, val min: Int = 1)
 
 val BASES = listOf(
     Base("dagger", Slot.WEAPON, Tx("Кинжал", "Dagger"), 'm', Mods(atk = 2, dmg = 2), 0),
@@ -209,6 +254,23 @@ val BASES = listOf(
     Base("lantern", Slot.LIGHT, Tx("Фонарь", "Lantern"), 'm', Mods(light = 25), 21),
     Base("skull", Slot.LIGHT, Tx("Свеча в черепе", "Skull candle"), 'f', Mods(light = 15, torch = 3), 22),
     Base("crystal", Slot.LIGHT, Tx("Светящийся кристалл", "Glow crystal"), 'm', Mods(light = 35), 23),
+    // deeper kinds: they only drop from the floor named last
+    Base("rapier", Slot.WEAPON, Tx("Рапира", "Rapier"), 'f', Mods(atk = 3, dmg = 3), 46, 4),
+    Base("warhammer", Slot.WEAPON, Tx("Боевой молот", "War hammer"), 'm', Mods(dmg = 7, atk = -2), 47, 6),
+    Base("crossbow", Slot.WEAPON, Tx("Арбалет", "Crossbow"), 'm', Mods(atk = 4, dmg = 3), 48, 5),
+    Base("flail", Slot.WEAPON, Tx("Кистень", "Flail"), 'm', Mods(dmg = 6), 49, 7),
+    Base("wand", Slot.WEAPON, Tx("Волшебная палочка", "Magic wand"), 'f', Mods(dmg = 3, light = 10, torch = 2), 50, 5),
+    Base("scale", Slot.ARMOR, Tx("Чешуйчатый доспех", "Scale mail"), 'm', Mods(def = 4, hp = 4), 51, 5),
+    Base("gambeson", Slot.ARMOR, Tx("Стёганка", "Gambeson"), 'f', Mods(def = 2, chase = 10), 52, 3),
+    Base("tower", Slot.ARMOR, Tx("Башенный щит", "Tower shield"), 'm', Mods(def = 5, chase = -10), 53, 8),
+    Base("horned", Slot.ARMOR, Tx("Рогатый шлем", "Horned helmet"), 'm', Mods(def = 2, atk = 1), 54, 4),
+    Base("gauntlets", Slot.ARMOR, Tx("Латные рукавицы", "Gauntlets"), 'p', Mods(def = 1, dmg = 2), 55, 6),
+    Base("bracelet", Slot.CHARM, Tx("Браслет", "Bracelet"), 'm', Mods(def = 1, luck = 1), 56, 3),
+    Base("runestone", Slot.CHARM, Tx("Рунный камень", "Rune stone"), 'm', Mods(hp = 10, heal = 10), 57, 6),
+    Base("watch", Slot.CHARM, Tx("Карманные часы", "Pocket watch"), 'p', Mods(torch = 5), 58, 5),
+    Base("feather", Slot.CHARM, Tx("Оберег с пером", "Feather charm"), 'm', Mods(chase = 10, luck = 1), 59, 4),
+    Base("fireflies", Slot.LIGHT, Tx("Банка светлячков", "Jar of fireflies"), 'f', Mods(light = 30, torch = 2), 60, 6),
+    Base("minerlamp", Slot.LIGHT, Tx("Шахтёрская каска", "Miner's lamp"), 'f', Mods(light = 20, loot = 10), 61, 8),
 )
 
 fun base(id: String) = BASES.firstOrNull { it.id == id } ?: BASES[0]
@@ -225,6 +287,10 @@ val AFFIXES = listOf(
     Affix("bright", listOf("Светлый", "Светлая", "Светлое", "Светлые"), "Bright", Mods(light = 10)),
     Affix("sturdy", listOf("Крепкий", "Крепкая", "Крепкое", "Крепкие"), "Sturdy", Mods(def = 1)),
     Affix("lucky", listOf("Счастливый", "Счастливая", "Счастливое", "Счастливые"), "Lucky", Mods(loot = 10)),
+    Affix("fiery", listOf("Огненный", "Огненная", "Огненное", "Огненные"), "Fiery", Mods(dmg = 2)),
+    Affix("frosty", listOf("Ледяной", "Ледяная", "Ледяное", "Ледяные"), "Frosty", Mods(def = 2)),
+    Affix("moon", listOf("Лунный", "Лунная", "Лунное", "Лунные"), "Moonlit", Mods(light = 15, torch = 2)),
+    Affix("ancient", listOf("Древний", "Древняя", "Древнее", "Древние"), "Ancient", Mods(hp = 6, atk = 1, luck = 1)),
 )
 
 fun affix(id: String) = AFFIXES.firstOrNull { it.id == id }
@@ -257,7 +323,7 @@ val STUFF = listOf(
 fun stuff(id: String) = STUFF.firstOrNull { it.id == id }
 
 /** Camp buildings: each level costs coins and a material and lends [per] times its level. */
-class Building(val id: String, val name: Tx, val about: Tx, val material: String, val per: Mods, val art: Int, val max: Int = 5)
+class Building(val id: String, val name: Tx, val about: Tx, val material: String, val per: Mods, val art: Int, val max: Int = 10)
 
 val BUILDINGS = listOf(
     Building("forge", Tx("Кузница", "Forge"), Tx("Закаляет снаряжение: каждая ступень – +1 к уровню заточки вещей.", "Tempers gear: each level allows one more upgrade on your things."), "iron", Mods(), 0),
@@ -351,6 +417,14 @@ val TRAITS: Map<String, Trait> = mapOf(
     "waterman" to Trait.BRUTE, "axolotl" to Trait.SOFT, "golem" to Trait.ARMOR, "troll" to Trait.BRUTE, "basilisk" to Trait.NONE,
     "minotaur" to Trait.BRUTE, "gargoyle" to Trait.ARMOR, "cube" to Trait.SOFT, "apprentice" to Trait.GHOST, "deepgnome" to Trait.NONE,
     "wyrmling" to Trait.BRUTE, "shadow" to Trait.SHY, "crystalspider" to Trait.ARMOR, "salamander" to Trait.SWIFT, "hydra" to Trait.BRUTE,
+    "mousebard" to Trait.SWIFT, "sockgoblin" to Trait.SWIFT, "lampmoth" to Trait.SHY, "puddlefrog" to Trait.SOFT, "pigeonknight" to Trait.ARMOR,
+    "drainimp" to Trait.SWIFT, "tincan" to Trait.ARMOR, "cobweb" to Trait.SOFT, "bellghost" to Trait.GHOST, "gravedigger" to Trait.ARMOR,
+    "mourner" to Trait.GHOST, "ossuary" to Trait.ARMOR, "crowkeeper" to Trait.SWIFT, "lichling" to Trait.GHOST, "sporecap" to Trait.SOFT,
+    "beetle" to Trait.ARMOR, "rootling" to Trait.SOFT, "glowworm" to Trait.SOFT, "fungalbear" to Trait.BRUTE, "pixie" to Trait.SWIFT,
+    "pikeeel" to Trait.SWIFT, "selkie" to Trait.SOFT, "ferryman" to Trait.NONE, "jellyfish" to Trait.SOFT, "snapturtle" to Trait.ARMOR,
+    "kraken" to Trait.BRUTE, "ironmole" to Trait.ARMOR, "lavaslug" to Trait.SOFT, "mirror" to Trait.GHOST, "clockwork" to Trait.ARMOR,
+    "bonedragon" to Trait.BRUTE, "echo" to Trait.GHOST, "geode" to Trait.ARMOR, "stormimp" to Trait.SWIFT, "gloomowl" to Trait.SHY,
+    "rustgolem" to Trait.BRUTE, "abyssfish" to Trait.SHY, "tramghost" to Trait.BRUTE, "queenmoth" to Trait.SWIFT, "heartstone" to Trait.ARMOR,
     "ratking" to Trait.SWIFT, "cryptkeeper" to Trait.ARMOR, "spiderqueen" to Trait.SWIFT, "olddragon" to Trait.BRUTE, "cityworm" to Trait.BRUTE,
 )
 
@@ -423,3 +497,41 @@ val STAT_HELP = listOf(
     Tx("Удача", "Luck") to Tx("Чаще редкие вещи, удачные хитрости, приручение и обход ловушек.", "Rarer finds, better tricks, easier taming and dodging traps."),
     Tx("Добыча", "Loot") to Tx("Больше монет и находок в сундуках и с побеждённых существ.", "More coins and finds from chests and beaten creatures."),
 )
+
+/** Skills after level 10: five more pairs per class, opening at 12, 14, 16, 18 and 20. */
+val EXTRA_TIERS: Map<String, List<Pair<Skill, Skill>>> = mapOf(
+    "warrior" to listOf(
+        sk("w2_iron", "Железная воля", "Iron will", Mods(hp = 30)) to sk("w2_axes", "Рубака", "Hewer", Mods(dmg = 5)),
+        sk("w2_bastion", "Бастион", "Bastion", Mods(def = 4)) to sk("w2_fury", "Ярость", "Fury", Mods(atk = 4)),
+        sk("w2_march", "Марш", "Forced march", Mods(chase = 20)) to sk("w2_medic", "Полевой лекарь", "Field medic", Mods(heal = 40)),
+        sk("w2_spoils", "Гроза подземелий", "Bane of the deep", Mods(loot = 25)) to sk("w2_rock", "Несокрушимый", "Unbreakable", Mods(hp = 40)),
+        sk("w2_legend", "Легенда", "Legend", Mods(atk = 3, dmg = 3, def = 3)) to sk("w2_champ", "Король арены", "Arena champion", Mods(dmg = 8)),
+    ),
+    "ranger" to listOf(
+        sk("r2_falcon", "Соколиный взор", "Falcon's eye", Mods(light = 30)) to sk("r2_trail", "Тропа зверя", "Beast trail", Mods(chase = 20)),
+        sk("r2_double", "Двойной выстрел", "Double shot", Mods(dmg = 5)) to sk("r2_leaves", "Плащ из листьев", "Leaf cloak", Mods(def = 4)),
+        sk("r2_stars", "Звёздный путь", "Star road", Mods(light = 40)) to sk("r2_wick", "Запасной фитиль", "Spare wick", Mods(torch = 10)),
+        sk("r2_map", "Охотник за сокровищами", "Treasure hunter", Mods(loot = 30)) to sk("r2_kite", "Вольный ветер", "Free wind", Mods(chase = 30)),
+        sk("r2_oak", "Хранитель леса", "Warden of the wood", Mods(luck = 4, hp = 20)) to sk("r2_split", "Без промаха", "Never miss", Mods(atk = 5)),
+    ),
+    "rogue" to listOf(
+        sk("o2_keys", "Мастер замков", "Master of locks", Mods(traps = 30, loot = 10)) to sk("o2_slipper", "Тихий шаг", "Soft step", Mods(chase = 20)),
+        sk("o2_poison", "Ядовитый клинок", "Poisoned blade", Mods(dmg = 5)) to sk("o2_ghost", "Призрачный плащ", "Ghost cloak", Mods(def = 4)),
+        sk("o2_hands", "Золотые руки", "Golden hands", Mods(loot = 30)) to sk("o2_fence", "Торговец тенями", "Shadow trader", Mods(sell = 30)),
+        sk("o2_cat", "Кошачья удача", "Cat's luck", Mods(luck = 5)) to sk("o2_smoke", "Неуловимый", "Elusive", Mods(chase = 30)),
+        sk("o2_crown", "Король воров", "King of thieves", Mods(loot = 20, luck = 3)) to sk("o2_shade", "Удар из тени", "Strike from the dark", Mods(atk = 5)),
+    ),
+    "mage" to listOf(
+        sk("m2_moon", "Лунный свет", "Moonlight", Mods(light = 40)) to sk("m2_life", "Зелье жизни", "Elixir of life", Mods(heal = 40)),
+        sk("m2_bolt", "Молния", "Lightning", Mods(dmg = 6)) to sk("m2_shield", "Магический щит", "Arcane shield", Mods(def = 4)),
+        sk("m2_glass", "Песочные часы", "Hourglass", Mods(torch = 12)) to sk("m2_orb", "Ясновидение", "Second sight", Mods(luck = 4)),
+        sk("m2_thunder", "Шар грома", "Thunder orb", Mods(dmg = 8)) to sk("m2_lamp", "Вечная лампа", "Everlamp", Mods(light = 30, torch = 5)),
+        sk("m2_sage", "Мудрец", "Sage", Mods(atk = 4, dmg = 4)) to sk("m2_phoenix", "Хранитель пламени", "Flamekeeper", Mods(torch = 15)),
+    ),
+)
+
+/** Floors one can start from once their boss is beaten: 6 after the fifth floor's boss, 11 after the tenth… */
+fun campDepth(bossFloor: Int) = bossFloor + 1
+
+/** The depth stake of an expedition so far (counted from the floor it started on), or if it went down to [to]. */
+fun Run.stake(to: Int = maxDepth) = depthMult(maxOf(to, maxDepth) - from + 1)

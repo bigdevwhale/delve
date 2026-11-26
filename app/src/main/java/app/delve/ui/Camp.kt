@@ -59,6 +59,7 @@ fun CampScreen(c: AppContainer, onSettings: () -> Unit) {
     var open by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var tab by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(0) }
     val stats = remember(v) { c.game.stats(s, null) }
     val cond = remember(v) { c.conditions() }
     androidx.compose.runtime.LaunchedEffect(Unit) { c.board() }
@@ -67,9 +68,9 @@ fun CampScreen(c: AppContainer, onSettings: () -> Unit) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             Box {
                 Pic("banner_camp", Modifier.fillMaxWidth())
-                Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, C.paper))))
+                Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(C.night.copy(alpha = .72f), C.night.copy(alpha = .25f), Color.Transparent, C.paper))))
                 Row(Modifier.statusBarsPadding().padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(w(ru, "Лагерь", "Camp"), style = T.Display.copy(color = C.floor), modifier = Modifier.weight(1f))
+                    Text(w(ru, "Лагерь", "Camp"), style = T.Display.copy(color = C.floor, shadow = androidx.compose.ui.graphics.Shadow(C.night, androidx.compose.ui.geometry.Offset(0f, 3f), 10f)), modifier = Modifier.weight(1f))
                     HelpButton(c, "camp", dark = true)
                     HGap(8.dp)
                     Box(Modifier.size(42.dp).clip(CircleShape).background(C.ink.copy(alpha = .7f)).clickable { onSettings() }, contentAlignment = Alignment.Center) {
@@ -83,15 +84,19 @@ fun CampScreen(c: AppContainer, onSettings: () -> Unit) {
                     Pic(Art.hero(s.cls, s.female), Modifier.size(84.dp))
                     HGap(10.dp)
                     Column(Modifier.weight(1f)) {
-                        Text(s.name, style = T.Title)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(s.name, style = T.Title, modifier = Modifier.weight(1f), maxLines = 1)
+                            Row(Modifier.clip(RoundedCornerShape(16.dp)).background(C.gold.copy(alpha = .16f)).border(1.dp, C.gold, RoundedCornerShape(16.dp)).padding(start = 4.dp, end = 10.dp, top = 2.dp, bottom = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Pic(Art.item(36), Modifier.size(24.dp)); HGap(4.dp)
+                                Text("${s.coins}", style = T.Strong.copy(color = C.ink))
+                            }
+                        }
                         Text(heroClass(s.cls).name(ru) + " · " + w(ru, "уровень ${s.level}", "level ${s.level}"), style = T.Small)
-                        Gap(4.dp)
+                        Gap(6.dp)
                         Bar(s.xp.toFloat() / c.game.need(s.level), C.gold)
+                        Gap(2.dp)
                         Text(w(ru, "опыт ${s.xp} из ${c.game.need(s.level)}", "xp ${s.xp} of ${c.game.need(s.level)}"), style = T.Small)
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("${s.coins}", style = T.Number.copy(color = C.gold))
-                        Text(w(ru, "монет", "coins"), style = T.Small)
                     }
                 }
                 if (c.game.skillChoices(s).isNotEmpty()) {
@@ -109,28 +114,46 @@ fun CampScreen(c: AppContainer, onSettings: () -> Unit) {
                     }
                 }
 
-                Heading(w(ru, "возьми до двух перед спуском", "take up to two before going down"), w(ru, "Доска гильдии", "Guild board"))
-                for (o in s.taken) OrderCard(o, ru, taken = true) { c.dropOrder(o.id) }
-                for (o in s.board) OrderCard(o, ru, taken = false, enabled = s.taken.size < 2) { c.takeOrder(o.id) }
-                if (s.board.isEmpty() && s.taken.isEmpty()) Text(w(ru, "Новые заказы появятся завтра.", "New orders come tomorrow."), style = T.Note, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
-                Text(w(ru, "Заказ оплачивается, когда поднимешься живым: через колодец, люк или по свитку.", "An order pays when you come up alive: through a well, the hatch or by scroll."), style = T.Small, modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = TextAlign.Center)
+                Gap(18.dp)
+                SubTabs(listOf(w(ru, "Доска гильдии", "Guild board"), w(ru, "Постройки", "Buildings"), w(ru, "Припасы", "Supplies")), tab) { tab = it }
+                when (tab) {
+                    0 -> Column {
+                        Heading(w(ru, "возьми до двух перед спуском", "take up to two before going down"), w(ru, "Доска гильдии", "Guild board"))
+                        for (o in s.taken) OrderCard(o, ru, taken = true) { c.dropOrder(o.id) }
+                        for (o in s.board) OrderCard(o, ru, taken = false, enabled = s.taken.size < 2) { c.takeOrder(o.id) }
+                        if (s.board.isEmpty() && s.taken.isEmpty()) Text(w(ru, "Новые заказы появятся завтра.", "New orders come tomorrow."), style = T.Note, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                        Text(w(ru, "Заказ оплачивается, когда поднимешься живым: через колодец, люк или по свитку.", "An order pays when you come up alive: through a well, the hatch or by scroll."), style = T.Small, modifier = Modifier.fillMaxWidth().padding(top = 4.dp), textAlign = TextAlign.Center)
 
-                Heading(w(ru, "лагерь растёт из добычи", "the camp grows from loot"), w(ru, "Постройки", "Buildings"))
-                for (row in BUILDINGS.chunked(2)) Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    for (b in row) {
-                        val lv = s.level(b.id)
-                        Column(Modifier.weight(1f).paper(if (lv > 0) C.floor else C.paper).clickable { open = b.id }.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Pic(Art.camp(b.id), Modifier.fillMaxWidth().aspectRatio(1.25f), alpha = if (lv > 0) 1f else .45f)
-                            Text(b.name(ru), style = T.Heading)
-                            Pips(lv, b.max)
-                            if (c.game.canBuild(s, b.id)) Text(w(ru, "можно улучшить", "can upgrade"), style = T.Small.copy(color = C.green))
-                        }
                     }
-                }
+                    1 -> Column {
+                        Heading(w(ru, "лагерь растёт из добычи", "the camp grows from loot"), w(ru, "Постройки", "Buildings"))
+                        for (row in BUILDINGS.chunked(2)) Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            for (b in row) {
+                                val lv = s.level(b.id)
+                                Column(Modifier.weight(1f).paper(if (lv > 0) C.floor else C.paper).clickable { open = b.id }.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Pic(Art.camp(b.id), Modifier.fillMaxWidth().aspectRatio(1.25f), alpha = if (lv > 0) 1f else .45f)
+                                    Text(b.name(ru), style = T.Heading)
+                                    Pips(lv, b.max)
+                                    if (c.game.canBuild(s, b.id)) Text(w(ru, "можно улучшить", "can upgrade"), style = T.Small.copy(color = C.green))
+                                }
+                            }
+                        }
 
-                Heading(w(ru, "в сундуке лагеря", "in the camp chest"), w(ru, "Припасы", "Supplies"))
-                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (st in STUFF) { val n = s.stuff[st.id] ?: 0; if (n > 0) StuffChip(st.art, n, label = st.name(ru)) }
+                    }
+                    else -> Column {
+                        for ((title, sub, ids) in listOf(
+                            Triple(w(ru, "Зелья и свитки", "Potions and scrolls"), w(ru, "берутся вниз сами, когда нужны", "taken down by themselves when needed"), listOf("potion", "recall", "mapscroll", "smoke")),
+                            Triple(w(ru, "Для вылазки", "For the expedition"), w(ru, "приручение и запертые двери", "taming and locked doors"), listOf("treat", "lockpick")),
+                            Triple(w(ru, "Материалы", "Materials"), w(ru, "на постройки, заточку и зелья", "for buildings, upgrades and potions"), listOf("bone", "mushroom", "pearl", "iron", "crystal", "wax")),
+                        )) {
+                            Heading(sub, title)
+                            for (row in ids.mapNotNull { app.delve.domain.stuff(it) }.chunked(2)) Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                for (st in row) SupplyTile(st, s.stuff[st.id] ?: 0, ru, Modifier.weight(1f))
+                                if (row.size == 1) Box(Modifier.weight(1f))
+                            }
+                        }
+                        Text(w(ru, "Зелья, лакомства и свитки варит алхимик – загляни в «Постройки».", "The alchemist brews potions, treats and scrolls: see «Buildings»."), style = T.Small, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                    }
                 }
                 Gap(30.dp)
             }
@@ -264,6 +287,27 @@ private fun DescentCard(c: AppContainer, s: app.delve.domain.GameState, extra: I
                     }
                 }
             }
+            if (s.camps.isNotEmpty()) {
+                // where to start: the hatch, or a deep camp opened by beating a floor's master
+                Gap(12.dp)
+                Text(w(ru, "Откуда начать", "Start from"), style = T.Small.copy(color = C.paper.copy(alpha = .7f)))
+                Gap(6.dp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (d in listOf(1) + s.camps.toList()) {
+                        val on = (if (s.startDepth in s.camps) s.startDepth else 1) == d
+                        Row(Modifier.clip(RoundedCornerShape(12.dp)).background(if (on) Flame.copy(alpha = .25f) else Color.White.copy(alpha = .05f))
+                            .border(if (on) 2.dp else 1.dp, if (on) Flame else C.paper.copy(alpha = .25f), RoundedCornerShape(12.dp))
+                            .clickable { s.startDepth = d; c.changed() }.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (d == 1) Pic(Art.room(1), Modifier.size(24.dp), tint = androidx.compose.ui.graphics.ColorFilter.tint(C.paper)) else Pic("camp_depth", Modifier.size(28.dp))
+                            HGap(6.dp)
+                            Column {
+                                Text(if (d == 1) w(ru, "Люк", "Hatch") else w(ru, "Стоянка", "Camp"), style = T.Small.copy(color = if (on) Flame else C.paper.copy(alpha = .7f)))
+                                Text(w(ru, "этаж $d", "floor $d"), style = T.Strong.copy(color = C.paper, fontSize = T.Small.fontSize))
+                            }
+                        }
+                    }
+                }
+            }
             Gap(6.dp)
             Text(w(ru, "≈ ${s.torchPick * 75 / 100 * 100} м прогулки", "≈ ${s.torchPick * 75 / 100 * 100} m of walking") + if (extra > 0) w(ru, " · +$extra мин от снаряжения", " · +$extra min from gear") else "",
                 style = T.Small.copy(color = C.paper.copy(alpha = .6f)), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
@@ -299,6 +343,22 @@ private fun DescentCard(c: AppContainer, s: app.delve.domain.GameState, extra: I
                     }
                 }
             }
+        }
+    }
+}
+
+/** A supply on a paper tile: picture, count, name and what it is for; none left – faded. */
+@Composable
+private fun SupplyTile(st: app.delve.domain.Stuff, n: Int, ru: Boolean, modifier: Modifier) {
+    Row(modifier.paper(if (n > 0) C.floor else C.paper).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(contentAlignment = Alignment.BottomEnd) {
+            Pic(Art.item(st.art), Modifier.size(48.dp), alpha = if (n > 0) 1f else .35f)
+            Text("$n", style = T.Strong.copy(color = if (n > 0) C.paper else C.ink2), modifier = Modifier.clip(CircleShape).background(if (n > 0) C.ink else C.paper2).padding(horizontal = 7.dp))
+        }
+        HGap(8.dp)
+        Column(Modifier.weight(1f)) {
+            Text(st.name(ru), style = T.Strong.copy(fontSize = T.Small.fontSize, color = if (n > 0) C.ink else C.muted))
+            Text(st.about(ru), style = T.Small.copy(fontSize = T.Eyebrow.fontSize * 1.05f))
         }
     }
 }

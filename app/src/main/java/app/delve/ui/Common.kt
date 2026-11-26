@@ -203,3 +203,18 @@ fun StuffChip(art: Int, n: Int, modifier: Modifier = Modifier, label: String? = 
         Text(if (label != null) "$label ×$n" else "×$n", style = T.Strong.copy(fontSize = T.Small.fontSize))
     }
 }
+
+/** Tabs inside a page: paper tabs on an ink rule, the open one raised. */
+@Composable
+fun SubTabs(titles: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(C.paper2).border(1.dp, C.ink.copy(alpha = .4f), RoundedCornerShape(12.dp)).padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        titles.forEachIndexed { i, t ->
+            val on = i == selected
+            Box(Modifier.weight(1f).clip(RoundedCornerShape(9.dp)).background(if (on) C.ink else Color.Transparent).clickable { onSelect(i) }.padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center) {
+                Text(t, style = T.Strong.copy(color = if (on) C.gold else C.ink2, fontSize = T.Small.fontSize), maxLines = 1)
+            }
+        }
+    }
+}

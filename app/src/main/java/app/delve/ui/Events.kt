@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,6 +44,7 @@ import app.delve.domain.Item
 import app.delve.domain.RoomKind
 import app.delve.domain.stuff
 import app.delve.domain.trait
+import app.delve.domain.stake
 import app.delve.ui.theme.C
 import app.delve.ui.theme.T
 
@@ -90,7 +92,7 @@ fun EventLayer(c: AppContainer) {
             val next = (c.state?.run?.depth ?: 1) + e.levels
             Text(w(ru, "Внизу – этаж $next, «${floorName(next, true)}». Там опаснее, но и добыча богаче. Карта этажа начнётся с этого перекрёстка.",
                 "Below lies floor $next, «${floorName(next, false)}». More danger, richer loot. The new floor starts from this crossing."), style = T.Body, textAlign = TextAlign.Center)
-            val now = app.delve.domain.depthMult(c.state?.run?.maxDepth ?: 1); val then = app.delve.domain.depthMult(maxOf(next, c.state?.run?.maxDepth ?: 1))
+            val now = c.state?.run?.stake() ?: 1.0; val then = c.state?.run?.stake(next) ?: 1.0
             if (then > now) { Gap(6.dp); Text(w(ru, "Ставка глубины: ×${fmt(now)} → ×${fmt(then)} ко всем монетам и материалам, если поднимешься живым.", "Depth stake: ×${fmt(now)} → ×${fmt(then)} on all coins and materials if you come up alive."), style = T.Strong.copy(color = C.gold), textAlign = TextAlign.Center) }
             Gap()
             Btn(w(ru, "Спуститься", "Go down"), Modifier.fillMaxWidth(), BtnKind.WAX) { c.descendStairs(e.node, e.levels) }
@@ -103,7 +105,7 @@ fun EventLayer(c: AppContainer) {
             Gap(6.dp)
             Text(w(ru, "По скобам можно выбраться в город. Вся добыча из сумки вернётся в лагерь.", "Rungs lead up into town. Everything in your bag comes home to camp."), style = T.Body, textAlign = TextAlign.Center)
             c.state?.run?.let { r ->
-                val m = app.delve.domain.depthMult(r.maxDepth)
+                val m = r.stake()
                 if (m > 1) { Gap(6.dp); Text(w(ru, "Ставка глубины ×${fmt(m)}: ${r.coins} монет станут ${(r.coins * m).toInt()}.", "Depth stake ×${fmt(m)}: ${r.coins} coins become ${(r.coins * m).toInt()}."), style = T.Strong.copy(color = C.gold), textAlign = TextAlign.Center) }
                 Orders(c, ru)
             }
@@ -128,15 +130,32 @@ fun EventLayer(c: AppContainer) {
             Btn(w(ru, "Оставить", "Leave it"), Modifier.fillMaxWidth(), BtnKind.LINE) { c.dismiss() }
         }
         is Ev.Shrine -> Sheet({ c.dismiss() }) {
-            Pic(Art.room(RoomKind.SHRINE.art), Modifier.size(100.dp), tint = androidx.compose.ui.graphics.ColorFilter.tint(C.ink))
-            Text(RoomKind.SHRINE.title(ru), style = T.Title)
-            Gap(4.dp)
-            Text(w(ru, "Свеча горит сама по себе. Выбери одно благословение до конца вылазки.", "The candle burns by itself. Choose one blessing for the rest of the expedition."), style = T.Body, textAlign = TextAlign.Center)
-            Gap()
-            for (i in e.offer) {
-                val (name, mods) = BLESSINGS[i]
-                Btn(name(ru), Modifier.fillMaxWidth(), BtnKind.LINE, sub = mods.lines(ru).joinToString(", ")) { c.bless(e.node, i) }
-                Gap(8.dp)
+            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))) {
+                Pic("banner_shrine", Modifier.fillMaxWidth())
+                Box(Modifier.matchParentSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, C.night.copy(alpha = .75f)))))
+                Text(RoomKind.SHRINE.title(ru), style = T.Display.copy(color = C.floor), modifier = Modifier.align(Alignment.BottomStart).padding(12.dp))
+            }
+            Gap(8.dp)
+            Text(w(ru, "Свечи горят сами по себе. Выбери одно благословение – оно будет с тобой до конца вылазки.", "The candles burn by themselves. Choose one blessing: it stays with you until the expedition ends."), style = T.Body, textAlign = TextAlign.Center)
+            Gap(12.dp)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                for (i in e.offer) {
+                    val (name, mods) = BLESSINGS[i]
+                    val parts = mods.parts(ru)
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp))
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(C.flame.copy(alpha = .28f), C.floor)))
+                        .border(2.dp, C.gold, RoundedCornerShape(14.dp)).clickable { c.bless(e.node, i) }.padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(Modifier.size(76.dp).drawBehind { drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(C.flame.copy(alpha = .55f), Color.Transparent))) }, contentAlignment = Alignment.Center) {
+                            Pic(statIcon(parts.firstOrNull()?.first ?: 0), Modifier.size(54.dp))
+                        }
+                        Text(name(ru), style = T.Heading, textAlign = TextAlign.Center)
+                        Gap(4.dp)
+                        for ((ic, t) in parts) Row(verticalAlignment = Alignment.CenterVertically) { Pic(statIcon(ic), Modifier.size(18.dp)); HGap(4.dp); Text(t, style = T.Small.copy(color = C.green)) }
+                        Gap(8.dp)
+                        Text(w(ru, "Принять", "Accept"), style = T.Button.copy(color = C.ink), modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(C.gold).padding(horizontal = 14.dp, vertical = 6.dp))
+                    }
+                }
             }
         }
         is Ev.LevelUp -> Sheet({ c.dismiss() }) {
@@ -281,6 +300,17 @@ private fun FoughtSheet(c: AppContainer, e: Ev.Fought, ru: Boolean) {
             for (l in e.log.takeLast(8)) Text("· " + l(ru), style = T.Small.copy(color = C.ink2))
         }
         if (e.hpLost > 0) { Gap(6.dp); Row(verticalAlignment = Alignment.CenterVertically) { Heart(Modifier.size(18.dp)); HGap(6.dp); Text("−${e.hpLost}", style = T.Strong.copy(color = C.red)) } }
+        if (e.won && e.foe.boss) {
+            val d = (c.state?.run?.depth ?: 0) + 1
+            Gap(10.dp)
+            Row(Modifier.fillMaxWidth().paper(C.floor, ink = C.gold).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Pic("camp_depth", Modifier.size(56.dp)); HGap(10.dp)
+                Column(Modifier.weight(1f)) {
+                    Text(w(ru, "Открыта стоянка на $d-м этаже", "A camp opens on floor $d"), style = T.Strong)
+                    Text(w(ru, "Теперь спуск можно начинать прямо оттуда – выбери её в лагере.", "Descents can now start right there: pick it at camp."), style = T.Small)
+                }
+            }
+        }
         Loot(e.coins, e.items, e.stuff, ru)
         Gap()
         Btn(w(ru, "Дальше", "Onwards"), Modifier.fillMaxWidth()) { c.dismiss() }
@@ -346,89 +376,196 @@ fun BagSheet(c: AppContainer, onClose: () -> Unit) {
     val ru = ru()
     remember(v) { 0 }
     Sheet(onClose) {
-        Text(w(ru, "Сумка", "Bag"), style = T.Title)
-        Text(w(ru, "Всё это вернётся в лагерь, если подняться через колодец или по свитку. Если факел погаснет или силы кончатся – половина останется внизу.",
-            "All this comes home if you climb a well or read a scroll. If the torch dies or you faint, half stays below."), style = T.Small, textAlign = TextAlign.Center)
-        Loot(run.coins, run.bag, run.stuff.filterValues { it > 0 }, ru)
-        if (run.coins == 0 && run.bag.isEmpty() && run.stuff.values.all { it == 0 }) { Gap(); Text(w(ru, "Пока пусто.", "Empty so far."), style = T.Note) }
-        val m = app.delve.domain.depthMult(run.maxDepth)
-        if (m > 1) { Gap(6.dp); Text(w(ru, "Ставка глубины ×${fmt(m)} – если подняться живым.", "Depth stake ×${fmt(m)} – if you come up alive."), style = T.Strong.copy(color = C.gold)) }
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))) {
+            Pic("banner_bag", Modifier.fillMaxWidth())
+            Box(Modifier.matchParentSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, C.night.copy(alpha = .75f)))))
+            Column(Modifier.align(Alignment.BottomStart).padding(12.dp)) {
+                Text(w(ru, "Сумка", "Bag"), style = T.Display.copy(color = C.floor))
+                val m = run.stake()
+                Text(if (m > 1) w(ru, "Ставка глубины ×${fmt(m)}, если подняться живым", "Depth stake ×${fmt(m)} if you come up alive") else w(ru, "Подними всё наверх – и оно твоё", "Bring it all up and it's yours"),
+                    style = T.Small.copy(color = C.flame))
+            }
+        }
+        Gap(10.dp)
+        val stuffNow = run.stuff.filterValues { it > 0 }
+        if (run.coins == 0 && run.bag.isEmpty() && stuffNow.isEmpty()) Text(w(ru, "Пока пусто. Загляни в тупики – там всегда что-то лежит.", "Empty so far. Look in dead ends: something always waits there."), style = T.Note, textAlign = TextAlign.Center)
+        else {
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (run.coins > 0) LootTile(36, "${run.coins}", w(ru, "монет", "coins"), C.gold)
+                for ((k, n) in stuffNow) stuff(k)?.let { LootTile(it.art, "×$n", it.name(ru).lowercase(), C.ink) }
+            }
+            for (it in run.bag) {
+                Gap(8.dp)
+                Row(Modifier.fillMaxWidth().paper(C.floor).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ItemTile(it, size = 52.dp); HGap(10.dp)
+                    Column(Modifier.weight(1f)) {
+                        Text(it.name(ru), style = T.Strong.copy(color = rarityColor(it.rarity)))
+                        Text(it.rarity.title(ru) + " · " + slotName(it.slot, ru).lowercase(), style = T.Small)
+                        ModIcons(it.mods, ru)
+                    }
+                }
+            }
+        }
+        Text(w(ru, "Если факел погаснет или силы кончатся, половина останется внизу.", "If the torch dies or you faint, half stays below."), style = T.Small, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
         Orders(c, ru)
         if (run.notes.isNotEmpty()) {
-            Heading(null, w(ru, "Журнал вылазки", "Expedition log"))
-            Column(Modifier.fillMaxWidth().paper(C.floor).padding(10.dp)) {
-                for (n in run.notes.takeLast(12).reversed()) Text("· " + n(ru), style = T.Small.copy(color = C.ink2))
+            Heading(w(ru, "что было в пути", "what happened on the way"), w(ru, "Журнал вылазки", "Expedition log"))
+            // a diary page: ruled lines, each entry with its picture, newest on top
+            Column(Modifier.fillMaxWidth().paper(C.floor).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                val n = run.notes.size
+                for (i in (n - 1) downTo maxOf(0, n - 15)) {
+                    val icon = run.noteIcons.getOrNull(i) ?: "room_13"
+                    Row(Modifier.fillMaxWidth().drawBehind { drawLine(C.wash.copy(alpha = .45f), androidx.compose.ui.geometry.Offset(0f, size.height), androidx.compose.ui.geometry.Offset(size.width, size.height), 1f) }
+                        .padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(34.dp).clip(androidx.compose.foundation.shape.CircleShape).background(C.paper), contentAlignment = Alignment.Center) {
+                            if (icon.startsWith("room_")) Pic(icon, Modifier.size(26.dp), tint = androidx.compose.ui.graphics.ColorFilter.tint(C.ink)) else Pic(icon, Modifier.size(28.dp))
+                        }
+                        HGap(10.dp)
+                        Text(run.notes[i](ru), style = T.Small.copy(color = C.ink2), modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
-        Gap()
         val recall = c.game.count(s, "recall")
-        Btn(w(ru, "Прочесть свиток возврата", "Read a recall scroll"), Modifier.fillMaxWidth(), BtnKind.GOLD, enabled = recall > 0, sub = w(ru, "свитков: $recall", "scrolls: $recall")) { onClose(); c.recall() }
-        Gap(8.dp)
         var ask by remember { mutableStateOf(false) }
-        if (!ask) Btn(w(ru, "Закончить вылазку", "End the expedition"), Modifier.fillMaxWidth(), BtnKind.LINE,
-            sub = w(ru, "выбраться наверх прямо отсюда", "climb out right here")) { ask = true }
-        else Column(Modifier.fillMaxWidth().paper(C.floor, ink = C.red).padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(w(ru, "Выбраться наверх?", "Climb out?"), style = T.Heading)
-            Text(w(ru, "Добыча вернётся в лагерь целиком, но ставка глубины не сработает и заказы гильдии не засчитаются. Через колодец или по свитку – выгоднее.",
-                "All the loot comes home, but the depth stake won't pay and guild orders won't count. A well or a scroll pays better."), style = T.Small, textAlign = TextAlign.Center)
-            Gap(8.dp)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Btn(w(ru, "Выбраться", "Climb out"), Modifier.weight(1f), BtnKind.WAX) { onClose(); c.leave() }
-                Btn(w(ru, "Остаться", "Stay"), Modifier.weight(1f), BtnKind.LINE) { ask = false }
+        Heading(null, w(ru, "Как выбраться", "Ways out"))
+        // three ways up, best first: each a card with its picture and what it costs
+        WayOut(Art.room(RoomKind.UP.art), true, w(ru, "Колодец или люк", "A well or the hatch"),
+            w(ru, "Лучше всего: ставка глубины и заказы засчитаются. Ищи на карте значок колодца.", "Best: the depth stake and orders pay. Look for the well on the map."), null) {}
+        Gap(8.dp)
+        WayOut(Art.item(25), false, w(ru, "Свиток возврата", "Recall scroll") + " · ×$recall",
+            if (recall > 0) w(ru, "Так же выгодно, как колодец, – из любого места.", "As good as a well, from anywhere.") else w(ru, "Свитков нет. Их продаёт торговец и варит алхимик.", "No scrolls. The merchant sells them, the alchemist brews them."),
+            if (recall > 0) w(ru, "Прочесть", "Read") else null) { onClose(); c.recall() }
+        Gap(8.dp)
+        WayOut(Art.room(13), false, w(ru, "Просто уйти", "Just leave"),
+            w(ru, "Добыча цела, но без ставки глубины и заказов.", "The loot is kept, but no stake and no orders."), w(ru, "Уйти", "Leave")) { ask = true }
+        Gap(16.dp)
+        Btn(w(ru, "Закрыть", "Close"), Modifier.fillMaxWidth(), BtnKind.INK) { onClose() }
+        if (ask) androidx.compose.ui.window.Dialog({ ask = false }) {
+            Column(Modifier.fillMaxWidth().paper(C.paper).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Pic(Art.room(RoomKind.UP.art), Modifier.size(80.dp), tint = androidx.compose.ui.graphics.ColorFilter.tint(C.ink))
+                Text(w(ru, "Выбраться наверх?", "Climb out?"), style = T.Title)
+                Gap(6.dp)
+                Text(w(ru, "Вся добыча вернётся в лагерь. Но ставка глубины не сработает, а заказы гильдии не засчитаются.", "All the loot comes home. But the depth stake won't pay and guild orders won't count."),
+                    style = T.Body, textAlign = TextAlign.Center)
+                Gap(16.dp)
+                Btn(w(ru, "Выбраться", "Climb out"), Modifier.fillMaxWidth(), BtnKind.WAX) { ask = false; onClose(); c.leave() }
+                Gap(8.dp)
+                Btn(w(ru, "Остаться внизу", "Stay below"), Modifier.fillMaxWidth(), BtnKind.LINE) { ask = false }
             }
         }
-        Gap(8.dp)
-        Btn(w(ru, "Закрыть", "Close"), Modifier.fillMaxWidth(), BtnKind.LINE) { onClose() }
     }
 }
 
+/** One way out of the dungeon: a picture, what it does, and its button if it can be used right now. */
+@Composable
+private fun WayOut(pic: String, ink: Boolean, title: String, text: String, action: String?, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().paper(C.floor).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (ink) Pic(pic, Modifier.size(46.dp), tint = androidx.compose.ui.graphics.ColorFilter.tint(C.ink)) else Pic(pic, Modifier.size(46.dp))
+        HGap(12.dp)
+        Column(Modifier.weight(1f)) {
+            Text(title, style = T.Strong)
+            Text(text, style = T.Small)
+        }
+        if (action != null) { HGap(8.dp); Btn(action, kind = BtnKind.LINE) { onClick() } }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EndedScreen(c: AppContainer, e: Ev.Ended, ru: Boolean) {
     val l = e.log
+    val good = !e.lost
     Column(Modifier.fillMaxSize().background(C.paper).verticalScroll(rememberScrollState())) {
-        Pic("banner_deep", Modifier.fillMaxWidth().heightIn(min = 160.dp))
-        Column(Modifier.fillMaxWidth().padding(20.dp).navigationBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box {
+            Pic(if (good) "banner_camp" else "banner_deep", Modifier.fillMaxWidth())
+            Box(Modifier.matchParentSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent, C.paper))))
+        }
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(when (l.how) {
                 "dark" -> w(ru, "Факел погас", "The torch went out")
                 "faint" -> w(ru, "Силы кончились", "You fainted")
                 "leave" -> w(ru, "Выбрался наверх", "Climbed out")
                 else -> w(ru, "Снова в лагере", "Back at camp")
             }, style = T.Display, textAlign = TextAlign.Center)
-            Gap(6.dp)
+            Gap(4.dp)
             Text(when (l.how) {
                 "dark" -> w(ru, "В темноте тебя вывел сквозняк. Половина добычи осталась внизу.", "A draught led you out in the dark. Half the loot stayed below.")
                 "faint" -> w(ru, "Тебя вытащил добрый кобольд. Половина добычи осталась внизу.", "A kind kobold dragged you out. Half the loot stayed below.")
                 "leave" -> w(ru, "Добыча в лагере. В следующий раз ищи колодец – там она стоит дороже.", "The loot is at camp. Next time find a well: it pays more there.")
                 else -> w(ru, "Вся добыча в лагере. Можно отдыхать и строить.", "All the loot is at camp. Time to rest and build.")
-            }, style = T.Body, textAlign = TextAlign.Center)
-            if (e.mult > 1) { Gap(8.dp); Text(w(ru, "Ставка глубины ×${fmt(e.mult)} сыграла!", "The depth stake ×${fmt(e.mult)} paid off!"), style = T.Strong.copy(color = C.gold)) }
+            }, style = T.Body.copy(color = C.ink2), textAlign = TextAlign.Center)
+            Gap(16.dp)
+            // the expedition in six tiles
+            val tiles = listOf(
+                Triple("room_${RoomKind.DOWN.art}", "${l.depth}", w(ru, "этаж", "floor")),
+                Triple(statIcon(5), metres(l.metres, ru), w(ru, "пройдено", "walked")),
+                Triple(statIcon(8), "${l.minutes} " + w(ru, "мин", "min"), w(ru, "в пути", "on the way")),
+                Triple("room_${RoomKind.EMPTY.art}", "${l.rooms}", w(ru, "залов", "halls")),
+                Triple(statIcon(2), "${l.beaten}", w(ru, "побед", "beaten")),
+                Triple("item_45", "+${l.xp}", w(ru, "опыта", "xp")),
+            )
+            for (row in tiles.chunked(3)) Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for ((icon, v, label) in row) Column(Modifier.weight(1f).paper(C.floor).padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (icon.startsWith("room_")) Pic(icon, Modifier.size(34.dp), tint = androidx.compose.ui.graphics.ColorFilter.tint(C.ink)) else Pic(icon, Modifier.size(34.dp))
+                    Text(v, style = T.Heading)
+                    Text(label, style = T.Small)
+                }
+            }
+            // what came home
+            Heading(null, w(ru, "Принесено в лагерь", "Brought to camp"))
+            if (e.mult > 1) {
+                Row(Modifier.clip(RoundedCornerShape(20.dp)).background(C.gold.copy(alpha = .18f)).border(1.dp, C.gold, RoundedCornerShape(20.dp)).padding(horizontal = 12.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Pic("room_${RoomKind.DOWN.art}", Modifier.size(22.dp), tint = androidx.compose.ui.graphics.ColorFilter.tint(C.ink)); HGap(6.dp)
+                    Text(w(ru, "Ставка глубины ×${fmt(e.mult)} – монеты и материалы умножены", "Depth stake ×${fmt(e.mult)}: coins and materials multiplied"), style = T.Small.copy(color = C.ink))
+                }
+                Gap(10.dp)
+            }
+            if (l.coins == 0 && e.items.isEmpty() && e.stuff.isEmpty()) Text(w(ru, "В этот раз – только опыт и пройденные метры.", "This time: only experience and the metres walked."), style = T.Note, textAlign = TextAlign.Center)
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (l.coins > 0) LootTile(36, "+${l.coins}", w(ru, "монет", "coins"), C.gold)
+                for ((k, n) in e.stuff) stuff(k)?.let { LootTile(it.art, "×$n", it.name(ru).lowercase(), C.ink) }
+            }
+            for (it in e.items) {
+                Gap(8.dp)
+                Row(Modifier.fillMaxWidth().paper(C.floor).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ItemTile(it, size = 54.dp); HGap(10.dp)
+                    Column(Modifier.weight(1f)) {
+                        Text(it.name(ru), style = T.Strong.copy(color = rarityColor(it.rarity)))
+                        Text(it.rarity.title(ru) + " · " + slotName(it.slot, ru).lowercase(), style = T.Small)
+                        ModIcons(it.mods, ru)
+                    }
+                }
+            }
             for (o in e.done) {
                 Gap(8.dp)
-                Row(Modifier.fillMaxWidth().paper(C.floor).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Pic(Art.item(25), Modifier.size(40.dp)); HGap(8.dp)
+                Row(Modifier.fillMaxWidth().paper(C.floor, ink = C.green).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Pic(Art.item(25), Modifier.size(42.dp)); HGap(8.dp)
                     Column(Modifier.weight(1f)) {
-                        Text(w(ru, "Заказ выполнен", "Order done"), style = T.Eyebrow.copy(color = C.green))
+                        Text(w(ru, "ЗАКАЗ ВЫПОЛНЕН", "ORDER DONE"), style = T.Eyebrow.copy(color = C.green))
                         Text(o.text(ru), style = T.Strong)
                         Text("+${o.coins} " + w(ru, "мон.", "c.") + " · " + (stuff(o.stuffId)?.name?.invoke(ru)?.lowercase() ?: "") + " ×${o.stuffN} · +${o.xp} " + w(ru, "опыта", "xp"), style = T.Small.copy(color = C.gold))
                     }
                 }
             }
-            Gap(16.dp)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                Stat(w(ru, "глубина", "depth"), "${l.depth}")
-                Stat(w(ru, "пройдено", "walked"), metres(l.metres, ru))
-                Stat(w(ru, "залов", "halls"), "${l.rooms}")
+            if (l.trail.size >= 4) {
+                Heading(null, w(ru, "Маршрут", "The route"))
+                TrailMap(l, Modifier.fillMaxWidth().aspectRatio(1.4f).clip(RoundedCornerShape(10.dp)))
             }
-            Gap(12.dp)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                Stat(w(ru, "побед", "beaten"), "${l.beaten}")
-                Stat(w(ru, "монет", "coins"), "${l.coins}")
-                Stat(w(ru, "опыта", "xp"), "${l.xp}")
-            }
-            if (l.trail.size >= 4) { Gap(18.dp); TrailMap(l, Modifier.fillMaxWidth().aspectRatio(1.4f)) }
-            Gap(24.dp)
+            Gap(20.dp)
             Btn(w(ru, "В лагерь", "To camp"), Modifier.fillMaxWidth(), BtnKind.GOLD) { c.dismiss() }
+            Gap(20.dp)
         }
     }
 }
 
+/** One kind of loot: a big icon on a paper tile, the amount and its name. */
+@Composable
+fun LootTile(art: Int, amount: String, label: String, color: Color) {
+    Column(Modifier.size(96.dp, 112.dp).paper(C.floor).padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Pic(Art.item(art), Modifier.size(50.dp))
+        Text(amount, style = T.Heading.copy(color = color))
+        Text(label, style = T.Small, maxLines = 1)
+    }
+}

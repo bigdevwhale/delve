@@ -13,7 +13,7 @@ from PIL import Image
 from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).parent))
-from gen_art import BEASTS
+from gen_art import BEASTS, BEASTS2
 
 ROOT = Path(__file__).resolve().parent.parent
 SHEETS = ROOT / "art" / "sheets"
@@ -126,12 +126,21 @@ def ink(sheet, cols, rows):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     ids = [b[0] for b in BEASTS]
-    for sheet, cols, rows, names in (("beasts1", 4, 4, ids[:16]), ("beasts2", 4, 4, ids[16:32]), ("beasts3", 4, 2, ids[32:40])):
+    ids2 = [b[0] for b in BEASTS2]
+    for sheet, cols, rows, names in (("beasts1", 4, 4, ids[:16]), ("beasts2", 4, 4, ids[16:32]), ("beasts3", 4, 2, ids[32:40]),
+                                     ("beasts4", 4, 4, ids2[:16]), ("beasts5", 4, 4, ids2[16:32]), ("beasts6", 4, 2, ids2[32:40])):
+        if not (SHEETS / f"{sheet}.png").exists():
+            continue
         for n, fr in zip(names, frames(SHEETS / f"{sheet}.png", cols, rows)):
             save(fr, f"beast_{n}")
         print(sheet)
+    # single redraws of creatures replace their sheet cells
+    for f in sorted(SHEETS.glob("beast_*.png")):
+        fr = frames(f, 1, 1)[0]
+        save(fr, f.stem)
+        print("redraw", f.stem)
     k = 0
-    for sheet, count in (("items1", 16), ("items2", 16), ("items3", 14)):
+    for sheet, count in (("items1", 16), ("items2", 16), ("items3", 14), ("items4", 16)):
         for fr in frames(SHEETS / f"{sheet}.png", 4, 4)[:count]:
             save(fr.resize((max(1, fr.width * 200 // max(fr.size)), max(1, fr.height * 200 // max(fr.size))), Image.LANCZOS), f"item_{k}")
             k += 1
@@ -145,6 +154,8 @@ def main():
     print("heroes")
     for n, fr in zip(["forge", "alchemist", "cartographer", "chandler", "chapel", "menagerie"], frames(SHEETS / "camp.png", 3, 2)):
         save(fr, f"camp_{n}")
+    if (SHEETS / "camp_depth.png").exists():
+        save(frames(SHEETS / "camp_depth.png", 1, 1)[0], "camp_depth")
     print("camp")
     if (SHEETS / "stats.png").exists():
         for n, fr in enumerate(frames(SHEETS / "stats.png", 4, 3)):
@@ -155,7 +166,7 @@ def main():
         for part in line.split('sk("')[1:]:
             ids.append(part.split('"')[0])
     k = 0
-    for sheet, cols, rows in (("skills1", 4, 4), ("skills2", 4, 4), ("skills3", 4, 2)):
+    for sheet, cols, rows in (("skills1", 4, 4), ("skills2", 4, 4), ("skills3", 4, 2), ("skills4", 4, 4), ("skills5", 4, 4), ("skills6", 4, 2)):
         if not (SHEETS / f"{sheet}.png").exists():
             continue
         for fr in frames(SHEETS / f"{sheet}.png", cols, rows):
@@ -163,7 +174,7 @@ def main():
                 save(fr.resize((max(1, fr.width * 200 // max(fr.size)), max(1, fr.height * 200 // max(fr.size))), Image.LANCZOS), f"skill_{ids[k]}")
             k += 1
         print(sheet)
-    for b in ("banner_camp", "banner_deep", "banner_descent"):
+    for b in ("banner_camp", "banner_deep", "banner_descent", "banner_chronicle", "banner_bag", "banner_shrine"):
         if not (SHEETS / f"{b}.png").exists():
             continue
         g = Image.open(SHEETS / f"{b}.png").convert("RGB")
