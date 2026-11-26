@@ -17,7 +17,7 @@ class BattleTest {
 
     private fun play(ids: List<String>, depth: Int, pick: (Battle) -> Move): Pair<Double, Double> {
         val g = Game()
-        var lost = 0.0; var wins = 0; var n = 0
+        var lost = 0.0; var wins = 0; var n = 0; var rounds = 0
         for (id in ids) for (seed in 1..60) {
             val s = g.newGame("T", "warrior", false)
             s.level = 1 + depth
@@ -27,9 +27,11 @@ class BattleTest {
             val b = g.battle(s, seed, g.foe(beast(id), depth, false))
             val out = ArrayList<Ev>()
             while (!g.move(s, b, pick(b), out)) Unit
+            rounds += b.round
             lost += hp0 - run.hp; n++
             if ((out.firstOrNull() as? Ev.Fought)?.won == true) wins++
         }
+        println("  rounds per fight at depth $depth: ${"%.1f".format(rounds.toDouble() / n)}")
         return wins.toDouble() / n to lost / n
     }
 

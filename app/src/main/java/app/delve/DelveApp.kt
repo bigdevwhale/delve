@@ -330,6 +330,14 @@ class AppContainer(context: Context) {
         changed()
     }
 
+    /** Straight from the meeting: the hero fights it all alone, only the outcome shows. */
+    fun quickFight(node: Int, foe: Foe) {
+        val s = state ?: return
+        pop()
+        battle.value = synchronized(this) { game.battle(s, node, foe) }
+        autoFight()
+    }
+
     /** The hero fights the rest alone. */
     fun autoFight() {
         val s = state ?: return

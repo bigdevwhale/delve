@@ -39,6 +39,10 @@ class Battle(val node: Int, val foe: Foe, var hp: Int, var intent: Intent) {
     var round = 0
     val log = ArrayList<Tx>()
     var lost = 0
+    /** What the last round did, for the screen to animate: dealt to the creature, taken by the hero, a crit or counter. */
+    var dealt = 0
+    var taken = 0
+    var crit = false
 }
 
 /**
@@ -85,8 +89,8 @@ class Game {
     fun foe(b: Beast, depth: Int, night: Boolean): Foe {
         val boss = b.hab == Hab.BOSS
         val t = b.tier + max(0, (depth - b.min) / 3) + if (night && !boss) 1 else 0
-        val hp = (6 + 7 * t) * (if (boss) 3 else 1)
-        return Foe(b, t, hp, 1 + t, 9 + t, 1 + (t * 1.6).roundToInt(), ((120 + 45 * t) * if (boss) 1.6 else 1.0).toInt(), 12 * t * if (boss) 3 else 1, 4 * t * if (boss) 4 else 1, boss)
+        val hp = (4 + 5 * t) * (if (boss) 3 else 1)
+        return Foe(b, t, hp, 1 + t, 6 + t, 1 + (t * 1.6).roundToInt(), ((120 + 45 * t) * if (boss) 1.6 else 1.0).toInt(), 12 * t * if (boss) 3 else 1, 4 * t * if (boss) 4 else 1, boss)
     }
 
     fun need(level: Int) = 60 * level + 20 * level * level
@@ -371,7 +375,7 @@ class Game {
             if (roll == 20 || roll + st.atk >= f.def) {
                 val d = (st.dmg + r.nextInt(4) + 1) * if (roll == 20) 2 else 1
                 foeHp -= d
-                log += if (roll == 20) Tx("Точный удар! −$d", "A perfect hit! −$d") else Tx("Попал: −$d", "Hit: −$d")
+                log += if (roll >= 19) Tx("Точный удар! −$d", "A perfect hit! −$d") else Tx("Попал: −$d", "Hit: −$d")
             } else log += Tx("Промах.", "Miss.")
             if (foeHp <= 0) break
             val fr = r.nextInt(20) + 1
@@ -598,12 +602,15 @@ class Game {
         val k = weaponK(s, f)
         fun dmg(mult: Double) = max(1, ((st.dmg + r.nextInt(4) + 1) * k * mult).roundToInt())
         var foeActs = true
+        b.dealt = 0; b.taken = 0; b.crit = false
+        val hp0 = b.hp
         when (move) {
             Move.STRIKE -> {
                 val roll = r.nextInt(20) + 1
-                val target = f.def + (if (b.intent == Intent.GUARD) 6 else 0) + (if (trait == Trait.SWIFT) 4 else 0)
+                val target = f.def + (if (b.intent == Intent.GUARD) 5 else 0) + (if (trait == Trait.SWIFT) 3 else 0)
                 if (roll == 20 || roll + st.atk >= target) {
-                    val d = dmg(if (roll == 20) 2.0 else 1.0)
+                    val d = dmg(if (roll >= 19) 2.0 else 1.0)
+                    if (roll >= 19) b.crit = true
                     b.hp -= d
                     b.log += if (roll == 20) Tx("Точный удар! −$d", "A perfect hit! −$d") else Tx("Удар: −$d", "Strike: −$d")
                 } else b.log += if (b.intent == Intent.GUARD) Tx("Удар отскочил от защиты.", "The blow bounces off its guard.") else Tx("Промах.", "Miss.")
@@ -627,14 +634,19 @@ class Game {
                 if (b.intent == Intent.HEAVY) d *= 2
                 if (move == Move.GUARD) {
                     d /= 4
-                    val c = max(1, (st.dmg / 2.0 * k).roundToInt()); b.hp -= c
-                    b.log += Tx("Принял удар на защиту (−$d) и ткнул в ответ: −$c", "Took the blow on your guard (−$d) and jabbed back: −$c")
+                    // guarding a wind-up opens it wide: a full counter-blow; an ordinary blow, a jab
+                    val counter = b.intent == Intent.HEAVY
+                    val c = if (counter) dmg(1.5) else max(1, (st.dmg / 2.0 * k).roundToInt())
+                    b.hp -= c
+                    if (counter) b.crit = true
+                    b.log += if (counter) Tx("Контратака! −$c", "Counter-blow! −$c") else Tx("Принял удар на защиту (−$d) и ткнул в ответ: −$c", "Took the blow on your guard (−$d) and jabbed back: −$c")
                 } else b.log += if (b.intent == Intent.HEAVY) Tx("${name.ru} бьёт со всей силы: −$d тебе", "${name.en} hits with all its might: −$d to you") else Tx("${name.ru} попадает: −$d тебе", "${name.en} hits you: −$d")
-                run.hp -= d; b.lost += d
+                run.hp -= d; b.lost += d; b.taken = d
             } else b.log += Tx("${name.ru} промахивается.", "${name.en} misses.")
         } else if (b.hp > 0 && b.intent == Intent.GUARD && foeActs) b.log += Tx("${name.ru} выжидает.", "${name.en} bides its time.")
+        b.dealt = max(0, hp0 - b.hp)
         b.intent = nextIntent(f, r)
-        val over = b.hp <= 0 || run.hp <= 0 || b.round >= 12
+        val over = b.hp <= 0 || run.hp <= 0 || b.round >= 6
         if (!over) return false
         if (b.hp <= 0) {
             run.resolved += b.node

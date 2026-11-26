@@ -41,6 +41,17 @@ import app.delve.domain.trait
 import app.delve.ui.theme.C
 import app.delve.ui.theme.T
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.IntOffset
 
 /** The fight, simple: the creature shows what it is about to do; strike or guard, or let the hero fight alone. */
 @Composable
@@ -56,9 +67,31 @@ fun BattleSheet(c: AppContainer) {
     val trait = f.beast.trait()
     val best = c.game.advice(battle)
     v.let { }
+    // the round's blow: the creature jolts, the damage floats up, a hit on the hero flashes the edges red
+    val shake = remember { Animatable(0f) }
+    val float = remember { Animatable(1f) }
+    val flash = remember { Animatable(0f) }
+    LaunchedEffect(battle.round) {
+        if (battle.round == 0) return@LaunchedEffect
+        launch { float.snapTo(0f); float.animateTo(1f, tween(450)) }
+        if (battle.taken > 0) launch { flash.snapTo(.5f); flash.animateTo(0f, tween(1400)) }
+        if (battle.dealt > 0) for (x in listOf(14f, -12f, 8f, -5f, 0f)) shake.animateTo(x, tween(55))
+    }
+    Box(Modifier.fillMaxSize().drawBehind {
+        if (flash.value > 0f) drawRect(Brush.radialGradient(listOf(Color.Transparent, C.red.copy(alpha = flash.value)), radius = size.maxDimension * .7f))
+    })
     Sheet(null) {
         // the creature, its health under it, and what it is about to do
-        Pic(Art.beast(f.beast.id), Modifier.size(150.dp))
+        Box(contentAlignment = Alignment.TopCenter) {
+            Pic(Art.beast(f.beast.id), Modifier.size(150.dp).offset { IntOffset(shake.value.dp.roundToPx(), 0) })
+            if (battle.round > 0) {
+                val txt = when { battle.dealt > 0 && battle.crit -> "−${battle.dealt}!"; battle.dealt > 0 -> "−${battle.dealt}"; else -> w(ru, "мимо", "miss") }
+                Text(txt, style = (if (battle.crit) T.Display else T.Title).copy(color = if (battle.dealt > 0) C.red else C.muted),
+                    modifier = Modifier.offset { IntOffset(78.dp.roundToPx(), (10 - 24 * float.value).dp.roundToPx()) }.alpha(.35f + .65f * float.value))
+            }
+        }
+        if (battle.crit) Text(if (battle.log.lastOrNull()?.ru?.startsWith("Контратака") == true) w(ru, "КОНТРАТАКА!", "COUNTER-BLOW!") else w(ru, "ТОЧНЫЙ УДАР!", "PERFECT HIT!"),
+            style = T.Eyebrow.copy(color = C.gold, fontSize = T.Small.fontSize))
         Text(f.beast.name(ru), style = T.Title)
         if (trait != Trait.NONE) Text(trait.title(ru) + " – " + trait.hint(ru).replaceFirstChar { it.lowercase() }, style = T.Small, textAlign = TextAlign.Center)
         Gap(6.dp)
@@ -77,7 +110,7 @@ fun BattleSheet(c: AppContainer) {
         }
         Gap(10.dp)
         // your health and what just happened
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(C.red.copy(alpha = flash.value)).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
             Pic(statIcon(0), Modifier.size(22.dp)); HGap(6.dp)
             Bar(run.hp.toFloat() / st.maxHp, C.green, Modifier.weight(1f), 9.dp)
             Text("  ${run.hp}/${st.maxHp}", style = T.Strong)

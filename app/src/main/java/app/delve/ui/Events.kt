@@ -243,6 +243,9 @@ private fun MeetSheet(c: AppContainer, e: Ev.Meet, ru: Boolean) {
         Btn(w(ru, "Сразиться здесь", "Fight here"), Modifier.fillMaxWidth(), BtnKind.WAX,
             sub = w(ru, "бой по раундам · примерно −$expect из $hp", "a fight in rounds · about −$expect of $hp")) { c.fight(e.node, f) }
         Gap(8.dp)
+        Btn(w(ru, "Быстрый бой", "Quick fight"), Modifier.fillMaxWidth(), BtnKind.LINE,
+            sub = w(ru, "герой бьётся сам, сразу итог", "the hero fights alone, straight to the outcome")) { c.quickFight(e.node, f) }
+        Gap(8.dp)
         Btn(w(ru, "Бежать и измотать", "Run and wear it out"), Modifier.fillMaxWidth(), BtnKind.INK,
             sub = w(ru, "пройди ${metres(chase, true)}, иногда будет кусать", "walk ${metres(chase, false)}, it bites now and then")) { c.flee(e.node, f) }
         if (!f.boss && f.beast.pet != null) {
