@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Подземелье</string>
+    <string name="channel_walk">Вылазка</string>
+    <string name="channel_alerts">В подземелье</string>
+    <string name="walk_title">Под городом</string>
+    <string name="walk_text">Факел горит. Иди дальше.</string>
+</resources>

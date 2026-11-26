@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Delve</string>
+    <string name="channel_walk">Expedition</string>
+    <string name="channel_alerts">In the dungeon</string>
+    <string name="walk_title">Underground</string>
+    <string name="walk_text">The torch is burning. Walk on.</string>
+</resources>
