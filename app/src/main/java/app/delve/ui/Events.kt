@@ -196,7 +196,7 @@ fun Loot(coins: Int, items: List<Item>, stuff: Map<String, Int>, ru: Boolean) {
             Column(Modifier.weight(1f)) {
                 Text(it.name(ru), style = T.Strong.copy(color = rarityColor(it.rarity)))
                 Text(it.rarity.title(ru) + " · " + slotName(it.slot, ru).lowercase(), style = T.Small)
-                ModLines(it.mods, ru)
+                ModIcons(it.mods, ru)
             }
         }
     }

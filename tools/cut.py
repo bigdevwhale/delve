@@ -146,7 +146,26 @@ def main():
     for n, fr in zip(["forge", "alchemist", "cartographer", "chandler", "chapel", "menagerie"], frames(SHEETS / "camp.png", 3, 2)):
         save(fr, f"camp_{n}")
     print("camp")
-    for b in ("banner_camp", "banner_deep"):
+    if (SHEETS / "stats.png").exists():
+        for n, fr in enumerate(frames(SHEETS / "stats.png", 4, 3)):
+            save(fr.resize((max(1, fr.width * 160 // max(fr.size)), max(1, fr.height * 160 // max(fr.size))), Image.LANCZOS), f"stat_{n}")
+        print("stats")
+    ids = []
+    for line in (ROOT / "app/src/main/java/app/delve/domain/Content.kt").read_text(encoding="utf-8").splitlines():
+        for part in line.split('sk("')[1:]:
+            ids.append(part.split('"')[0])
+    k = 0
+    for sheet, cols, rows in (("skills1", 4, 4), ("skills2", 4, 4), ("skills3", 4, 2)):
+        if not (SHEETS / f"{sheet}.png").exists():
+            continue
+        for fr in frames(SHEETS / f"{sheet}.png", cols, rows):
+            if k < len(ids):
+                save(fr.resize((max(1, fr.width * 200 // max(fr.size)), max(1, fr.height * 200 // max(fr.size))), Image.LANCZOS), f"skill_{ids[k]}")
+            k += 1
+        print(sheet)
+    for b in ("banner_camp", "banner_deep", "banner_descent"):
+        if not (SHEETS / f"{b}.png").exists():
+            continue
         g = Image.open(SHEETS / f"{b}.png").convert("RGB")
         g = g.resize((1200, round(1200 * g.height / g.width)), Image.LANCZOS)
         g.save(OUT / f"{b}.webp", "WEBP", quality=84, method=6)

@@ -127,6 +127,29 @@ CAMP = [
 ]
 
 
+STATS = [
+    "a red heart with a small bandage", "an archery target with an arrow in the bullseye", "a sword striking with a small impact burst", "a round wooden shield with an iron rim",
+    "a brass lantern glowing", "a leather boot in mid-stride with motion lines", "a four-leaf clover", "an open treasure chest with gold",
+    "a burning torch", "an iron bear trap", "a bowl of green healing herbs", "a brass balance scale with coins",
+]
+
+# order = skills in domain/Content.kt (CLASSES → tiers → first, second)
+SKILLS = [
+    "a patch of thick tough leather hide with stitches", "an armoured iron gauntlet clenched into a fist", "a big kite shield with a lion emblem (no letters)", "a curved war horn",
+    "a pair of sturdy marching boots", "a roll of bandage around a red heart", "the head of a battering ram with curled horns", "a section of a thick stone wall",
+    "a medal on a ribbon", "a heavy war hammer cracking a stone",
+    "a brass spyglass", "a feather floating over a footprint", "an arrow piercing the centre of a target", "animal paw tracks beside a small wooden signpost (no letters)",
+    "an owl feather and a crescent moon", "a long torch with a tall flame", "a bow with a nocked arrow", "a leaf swirling in a gust",
+    "a swirl of wind with leaves", "a four-leaf clover with an acorn",
+    "a leather glove holding a lock pick", "brass scales weighing coins", "a cat paw print", "a curved dagger half in shadow",
+    "a monocle over a pile of gold coins", "a puff of smoke with a dark cloak vanishing into it", "a pair of dice", "a coin purse lifted by a little hook",
+    "a dark hooded mask", "a small pouch spilling pepper dust",
+    "a bright magic spark star", "a glowing orb of light floating", "a candle with a very long wick", "a bundle of healing herbs with a soft green glow",
+    "a stone tablet carved with a rune", "a horseshoe with sparkles", "an old open book with an eye drawn on the page", "a fireball",
+    "an eternal flame in an iron brazier", "a pointed wizard hat with a star",
+]
+
+
 def banner(desc):
     return (HEAD + "Image: a wide banner illustration for a cozy fantasy walking game, " + desc + "\n" + INK
             + " Wide panorama, aspect ratio 3:1. No people, no creatures, no letters, numbers or text anywhere.")
@@ -143,6 +166,11 @@ JOBS = {
     "heroes": sheet(4, 2, "8 adventurer portraits, from the knees up, facing three-quarters right", HEROES),
     "camp": sheet(3, 2, "6 places of an adventurers' camp, each a small separate vignette", CAMP, OBJ),
     "banner_camp": banner("an adventurers' camp in an old courtyard of a town at dusk: a tent, a campfire, a forge, a cart, laundry lines, and in the middle a heavy iron hatch in the cobblestones leading down."),
+    "stats": sheet(4, 3, "12 game icons for hero statistics", STATS, OBJ),
+    "skills1": sheet(4, 4, "16 skill emblems", SKILLS[:16], OBJ, "Each emblem is a single bold symbolic object, no frame, no circle behind it. "),
+    "skills2": sheet(4, 4, "16 skill emblems", SKILLS[16:32], OBJ, "Each emblem is a single bold symbolic object, no frame, no circle behind it. "),
+    "skills3": sheet(4, 2, "8 skill emblems", SKILLS[32:40], OBJ, "Each emblem is a single bold symbolic object, no frame, no circle behind it. "),
+    "banner_descent": HEAD + "Image: an illustration for a cozy fantasy walking game: at night in an old town courtyard, a heavy round iron hatch lies open in the cobblestones; worn stone steps spiral down into darkness; warm orange torchlight glows up from below; a lantern stands on the cobbles beside the hatch; thin mist; a lamppost and house walls faintly in the background. " + INK + " Landscape, aspect ratio 2:1. No people, no creatures, no letters, numbers or text anywhere.",
     "banner_deep": banner("a cross-section under a town street: houses and a lamppost on top, then layers of earth, old sewer brick tunnels, a crypt, a mushroom cave and an underground river going deeper and deeper."),
 }
 

@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -98,44 +99,14 @@ fun CampScreen(c: AppContainer, onSettings: () -> Unit) {
                     Text(w(ru, "✦ Новое умение ждёт выбора – загляни к герою.", "✦ A new skill awaits – see the hero page."), style = T.Note, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                 }
 
-                // the way down
-                Heading(w(ru, "под мостовой", "beneath the cobbles"), w(ru, "Спуск", "The descent"))
-                Column(Modifier.fillMaxWidth().paper(C.floor).padding(14.dp)) {
-                    Text(w(ru, "Подземелье повторяет улицы вокруг тебя. Каждый перекрёсток – зал, каждая улица – коридор. Выбери, на сколько хватит факела:",
-                        "The dungeon follows the streets around you. Every crossing is a hall, every street a corridor. Choose how long the torch should burn:"), style = T.Body)
-                    Gap(10.dp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        for (m in listOf(15, 30, 45, 60)) {
-                            val on = s.torchPick == m
-                            Column(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (on) C.ink else C.paper).border(1.4.dp, C.ink, RoundedCornerShape(10.dp))
-                                .clickable { s.torchPick = m; c.changed() }.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("$m", style = T.Number.copy(color = if (on) C.gold else C.ink))
-                                Text(w(ru, "мин", "min"), style = T.Small.copy(color = if (on) C.paper else C.muted))
-                            }
-                        }
+                // the way down: a dark card lit from the open hatch
+                Gap(18.dp)
+                DescentCard(c, s, stats.torch, cond, busy, error, ru) {
+                    busy = true; error = null
+                    scope.launch {
+                        error = runCatching { c.descend(s.torchPick) }.getOrElse { "net" }
+                        busy = false
                     }
-                    if (stats.torch > 0) Text(w(ru, "+${stats.torch} мин от снаряжения и лагеря", "+${stats.torch} min from gear and camp"), style = T.Small, modifier = Modifier.padding(top = 6.dp))
-                    Gap(10.dp)
-                    Conditions(cond, ru)
-                    Gap(12.dp)
-                    Btn(if (busy) w(ru, "Зажигаю факел…", "Lighting the torch…") else w(ru, "Зажечь факел и спуститься", "Light the torch and go down"), Modifier.fillMaxWidth(), BtnKind.WAX, enabled = !busy) {
-                        busy = true; error = null
-                        scope.launch {
-                            error = runCatching { c.descend(s.torchPick) }.getOrElse { "net" }
-                            busy = false
-                        }
-                    }
-                    error?.let {
-                        Gap(6.dp)
-                        Text(when (it) {
-                            "gps" -> w(ru, "Жду, когда телефон поймёт, где ты. Выйди под открытое небо.", "Waiting for the phone to find you. Step outside.")
-                            "net" -> w(ru, "Не получилось скачать карту улиц. Нужен интернет.", "Couldn't download the street map. Internet is needed.")
-                            "streets" -> w(ru, "Рядом нет улиц и дорожек. Подойди ближе к дороге.", "No streets or paths nearby. Get closer to a road.")
-                            else -> w(ru, "Карта района ещё загружается.", "The district map is still loading.")
-                        }, style = T.Small.copy(color = C.red))
-                    }
-                    Gap(6.dp)
-                    Text(w(ru, "Рекорд глубины: ${s.deepest} · пройдено всего ${metres(s.metres.toInt(), true)}", "Deepest: ${s.deepest} · walked in all ${metres(s.metres.toInt(), false)}"), style = T.Small, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
 
                 Heading(w(ru, "возьми до двух перед спуском", "take up to two before going down"), w(ru, "Доска гильдии", "Guild board"))
@@ -255,5 +226,79 @@ private fun BuildingSheet(c: AppContainer, id: String, ru: Boolean, onClose: () 
         Btn(w(ru, "Закрыть", "Close"), Modifier.fillMaxWidth(), BtnKind.LINE) { onClose() }
         Gap(4.dp)
         Box(Modifier.height(1.dp))
+    }
+}
+
+private val Night = Color(0xFF15110D)
+private val Flame = Color(0xFFF2A53A)
+
+/** The descent: the open hatch at night, the torch to choose, what waits below today, and the way in. */
+@Composable
+private fun DescentCard(c: AppContainer, s: app.delve.domain.GameState, extra: Int, cond: app.delve.domain.Conditions, busy: Boolean, error: String?, ru: Boolean, go: () -> Unit) {
+    val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "hatch")
+    val glow by t.animateFloat(.75f, 1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(900), androidx.compose.animation.core.RepeatMode.Reverse), label = "g")
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Night).border(1.5.dp, Flame.copy(alpha = .45f), RoundedCornerShape(16.dp))) {
+        Box {
+            Pic("banner_descent", Modifier.fillMaxWidth(), alpha = glow)
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Night.copy(alpha = .55f), Color.Transparent, Color.Transparent, Night))))
+            Column(Modifier.padding(16.dp)) {
+                Text(w(ru, "ПОД МОСТОВОЙ", "BENEATH THE COBBLES"), style = T.Eyebrow.copy(color = Flame))
+                Text(w(ru, "Спуск", "The descent"), style = T.Display.copy(color = C.floor))
+            }
+        }
+        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
+            Text(w(ru, "Люк открыт. Внизу – твои улицы, только темнее. Сколько будет гореть факел?", "The hatch is open. Below are your streets, only darker. How long should the torch burn?"),
+                style = T.Body.copy(color = C.paper.copy(alpha = .85f)))
+            Gap(12.dp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (m in listOf(15, 30, 45, 60)) {
+                    val on = s.torchPick == m
+                    Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                        .background(if (on) Brush.verticalGradient(listOf(Flame.copy(alpha = .35f), Night)) else Brush.verticalGradient(listOf(Color.White.copy(alpha = .05f), Color.White.copy(alpha = .05f))))
+                        .border(if (on) 2.dp else 1.dp, if (on) Flame else C.paper.copy(alpha = .25f), RoundedCornerShape(12.dp))
+                        .clickable { s.torchPick = m; c.changed() }.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        // a taller torch for a longer walk
+                        Pic(Art.item(20), Modifier.size((22 + m / 3).dp), alpha = if (on) 1f else .45f)
+                        Text("$m", style = T.Number.copy(color = if (on) Flame else C.paper.copy(alpha = .7f)))
+                        Text(w(ru, "мин", "min"), style = T.Small.copy(color = C.paper.copy(alpha = .55f)))
+                    }
+                }
+            }
+            Gap(6.dp)
+            Text(w(ru, "≈ ${s.torchPick * 75 / 100 * 100} м прогулки", "≈ ${s.torchPick * 75 / 100 * 100} m of walking") + if (extra > 0) w(ru, " · +$extra мин от снаряжения", " · +$extra min from gear") else "",
+                style = T.Small.copy(color = C.paper.copy(alpha = .6f)), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+            Gap(12.dp)
+            // what is going on below today
+            val lines = buildList {
+                if (cond.night) add("🌙" to w(ru, "Ночь: чудовища сильнее, добыча богаче.", "Night: creatures are stronger, loot richer."))
+                if (cond.rain) add("🌧" to w(ru, "Дождь: подземные реки поднялись, у воды больше жемчуга.", "Rain: the rivers rose; more pearls by the water."))
+                if (cond.frost) add("❄" to w(ru, "Мороз: в коридорах иней.", "Frost: rime in the corridors."))
+                if (s.taken.isNotEmpty()) add("📜" to w(ru, "Заказов взято: ${s.taken.size}.", "Orders taken: ${s.taken.size}."))
+                if (isEmpty()) add("🕯" to w(ru, "Сегодня под городом тихо.", "All quiet under the town today."))
+            }
+            for ((ic, l) in lines) Row(Modifier.padding(vertical = 2.dp)) {
+                Text(ic, style = T.Body); HGap(8.dp); Text(l, style = T.Small.copy(color = Flame.copy(alpha = .9f)))
+            }
+            Gap(14.dp)
+            Btn(if (busy) w(ru, "Зажигаю факел…", "Lighting the torch…") else w(ru, "Зажечь факел и спуститься", "Light the torch and go down"), Modifier.fillMaxWidth(), BtnKind.WAX, enabled = !busy) { go() }
+            error?.let {
+                Gap(6.dp)
+                Text(when (it) {
+                    "gps" -> w(ru, "Жду, когда телефон поймёт, где ты. Выйди под открытое небо.", "Waiting for the phone to find you. Step outside.")
+                    "net" -> w(ru, "Не получилось скачать карту улиц. Нужен интернет.", "Couldn't download the street map. Internet is needed.")
+                    "streets" -> w(ru, "Рядом нет улиц и дорожек. Подойди ближе к дороге.", "No streets or paths nearby. Get closer to a road.")
+                    else -> w(ru, "Карта района ещё загружается.", "The district map is still loading.")
+                }, style = T.Small.copy(color = Color(0xFFE08A70)))
+            }
+            Gap(10.dp)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                for ((v, l) in listOf("${s.deepest}" to w(ru, "рекорд глубины", "deepest floor"), metres(s.metres.toInt(), ru) to w(ru, "пройдено", "walked"), "${s.logs.size}" to w(ru, "вылазок", "expeditions"))) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(v, style = T.Heading.copy(color = C.paper))
+                        Text(l, style = T.Small.copy(color = C.paper.copy(alpha = .55f)))
+                    }
+                }
+            }
+        }
     }
 }

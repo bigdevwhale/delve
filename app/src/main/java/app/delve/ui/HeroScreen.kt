@@ -46,6 +46,7 @@ fun HeroScreen(c: AppContainer) {
     val ru = ru()
     val st = remember(v) { c.game.stats(s, null) }
     var pick by remember { mutableStateOf<Long?>(null) }
+    var help by remember { mutableStateOf<Int?>(null) }
     val cls = heroClass(s.cls)
 
     Box(Modifier.fillMaxSize()) {
@@ -58,15 +59,23 @@ fun HeroScreen(c: AppContainer) {
                     Text(cls.about(ru), style = T.Small)
                 }
             }
-            Card(Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Num(w(ru, "здоровье", "health"), "${st.maxHp}"); Num(w(ru, "меткость", "to hit"), "+${st.atk}"); Num(w(ru, "урон", "damage"), "${st.dmg}+d4"); Num(w(ru, "защита", "armour"), "${st.def}")
-                }
-                Gap(10.dp)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Num(w(ru, "свет", "light"), "${st.light} м"); Num(w(ru, "погоня", "chase"), "−${st.chase}%"); Num(w(ru, "удача", "luck"), "${st.luck}"); Num(w(ru, "добыча", "loot"), "+${st.loot}%")
+            // the numbers: tap one to learn what it does
+            val tiles = listOf(
+                Triple(0, "${st.maxHp}", w(ru, "здоровье", "health")),
+                Triple(1, "+${st.atk}", w(ru, "меткость", "to hit")),
+                Triple(2, "${st.dmg + 1}–${st.dmg + 4}", w(ru, "урон", "damage")),
+                Triple(3, "${st.def}", w(ru, "защита", "armour")),
+                Triple(4, "${st.light} " + w(ru, "м", "m"), w(ru, "свет", "light")),
+                Triple(5, "−${st.chase}%", w(ru, "погоня", "chase")),
+                Triple(6, "${st.luck}", w(ru, "удача", "luck")),
+                Triple(7, "+${st.loot}%", w(ru, "добыча", "loot")),
+            )
+            for (row in tiles.chunked(4)) {
+                Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for ((i, v, l) in row) StatTile(i, v, l, Modifier.weight(1f)) { help = i }
                 }
             }
+            Text(w(ru, "Нажми на число, чтобы узнать, на что оно влияет.", "Tap a number to see what it does."), style = T.Small, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
 
             Heading(w(ru, "надето", "worn"), w(ru, "Снаряжение", "Gear"))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -89,24 +98,20 @@ fun HeroScreen(c: AppContainer) {
             }
 
             Heading(w(ru, "по одному на выбор", "one of each pair"), w(ru, "Умения", "Skills"))
+            Text(w(ru, "На уровнях 2, 4, 6, 8 и 10 открывается пара умений. Выбери одно – второе закроется навсегда.", "At levels 2, 4, 6, 8 and 10 a pair of skills opens. Choose one: the other closes for good."),
+                style = T.Small, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             cls.tiers.forEachIndexed { i, (a, b) ->
                 val lv = SKILL_LEVELS[i]
                 val open = s.level >= lv
                 val chosen = listOf(a, b).firstOrNull { it.id in s.skills }
-                Text(w(ru, "Уровень $lv", "Level $lv"), style = T.Eyebrow, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (k in listOf(a, b)) {
-                        val mine = chosen?.id == k.id
-                        val can = open && chosen == null
-                        Column(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (mine) C.ink else C.paper)
-                            .border(1.4.dp, if (can) C.gold else C.ink.copy(alpha = if (mine) 1f else .35f), RoundedCornerShape(10.dp))
-                            .clickable(enabled = can) { c.learn(k.id) }.padding(10.dp)) {
-                            Text(k.name(ru), style = T.Strong.copy(color = if (mine) C.gold else if (open) C.ink else C.faint))
-                            for (l in k.mods.lines(ru)) Text(l, style = T.Small.copy(color = if (mine) C.paper else C.muted))
-                            if (can) Text(w(ru, "выбрать", "choose"), style = T.Small.copy(color = C.green))
-                        }
-                    }
+                val can = open && chosen == null
+                if (i > 0) FadeRule()
+                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
+                    SkillMedal(a, ru, chosen?.id == a.id, chosen != null, open, can, Modifier.weight(1f)) { c.learn(a.id) }
+                    LevelKnot(lv, open, ru)
+                    SkillMedal(b, ru, chosen?.id == b.id, chosen != null, open, can, Modifier.weight(1f)) { c.learn(b.id) }
                 }
+                if (can) Text(w(ru, "✦ Выбери одно из двух", "✦ Choose one of the two"), style = T.Note.copy(color = C.gold), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             }
 
             val tamed = s.lore.filter { it.value.tamed }.keys.map { beast(it) }
@@ -119,7 +124,7 @@ fun HeroScreen(c: AppContainer) {
                         horizontalAlignment = Alignment.CenterHorizontally) {
                         Pic(Art.beast(b.id), Modifier.size(70.dp))
                         Text(b.name(ru), style = T.Small.copy(color = C.ink), textAlign = TextAlign.Center, maxLines = 2)
-                        b.pet?.let { Text(it.lines(ru).joinToString(), style = T.Small.copy(color = C.green), textAlign = TextAlign.Center) }
+                        b.pet?.let { ModIcons(it, ru, center = true, color = C.green) }
                     }
                 }
             }
@@ -127,6 +132,17 @@ fun HeroScreen(c: AppContainer) {
         }
         HelpButton(c, "hero", Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp))
         pick?.let { uid -> s.gear.firstOrNull { it.uid == uid }?.let { ItemSheet(c, it, ru) { pick = null } } ?: run { pick = null } }
+        help?.let { i ->
+            val (name, text) = app.delve.domain.STAT_HELP[i]
+            Sheet({ help = null }) {
+                Pic(statIcon(i), Modifier.size(90.dp))
+                Text(name(ru), style = T.Title)
+                Gap(6.dp)
+                Text(text(ru), style = T.Body, textAlign = TextAlign.Center)
+                Gap()
+                Btn(w(ru, "Понятно", "Got it"), Modifier.fillMaxWidth()) { help = null }
+            }
+        }
         PageHint(c, "hero")
     }
 }
@@ -147,7 +163,7 @@ private fun ItemSheet(c: AppContainer, it: app.delve.domain.Item, ru: Boolean, o
         Text(it.name(ru), style = T.Title.copy(color = rarityColor(it.rarity)), textAlign = TextAlign.Center)
         Text(it.rarity.title(ru) + " · " + slotName(it.slot, ru).lowercase() + " · " + w(ru, "ступень ${it.tier}", "tier ${it.tier}"), style = T.Small)
         Gap(8.dp)
-        ModLines(it.mods, ru)
+        ModIcons(it.mods, ru, center = true)
         if (!worn && other != null) {
             Gap(8.dp)
             Text(w(ru, "Сейчас надето: ${other.name(true)}", "Worn now: ${other.name(false)}"), style = T.Small)

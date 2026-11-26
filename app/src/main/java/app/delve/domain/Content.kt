@@ -31,6 +31,23 @@ data class Mods(
     fun times(k: Double) = Mods((hp * k).toInt(), (atk * k).toInt(), (def * k).toInt(), (dmg * k).toInt(), (light * k).toInt(), (chase * k).toInt(),
         (torch * k).toInt(), (luck * k).toInt(), (traps * k).toInt(), (loot * k).toInt(), (heal * k).toInt(), (sell * k).toInt())
 
+    /** The non-zero parts as (stat icon index, short text), the icon index as in [STAT_ICON]. */
+    fun parts(ru: Boolean): List<Pair<Int, String>> = buildList {
+        fun s(v: Int) = if (v > 0) "+$v" else "$v"
+        if (hp != 0) add(0 to s(hp) + if (ru) " здоровья" else " health")
+        if (atk != 0) add(1 to s(atk) + if (ru) " к меткости" else " to hit")
+        if (dmg != 0) add(2 to s(dmg) + if (ru) " к урону" else " damage")
+        if (def != 0) add(3 to s(def) + if (ru) " к защите" else " armour")
+        if (light != 0) add(4 to s(light) + if (ru) " м света" else " m of light")
+        if (chase != 0) add(5 to s(chase) + if (ru) "% короче погоня" else "% shorter chases")
+        if (luck != 0) add(6 to s(luck) + if (ru) " к удаче" else " luck")
+        if (loot != 0) add(7 to s(loot) + if (ru) "% добычи" else "% loot")
+        if (torch != 0) add(8 to s(torch) + if (ru) " мин факела" else " torch min")
+        if (traps != 0) add(9 to s(traps) + if (ru) "% обойти ловушку" else "% dodge traps")
+        if (heal != 0) add(10 to s(heal) + if (ru) "% лечения" else "% healing")
+        if (sell != 0) add(11 to s(sell) + if (ru) "% к ценам" else "% better prices")
+    }
+
     /** The non-zero parts as short lines, e.g. "+2 к атаке". */
     fun lines(ru: Boolean): List<String> = buildList {
         fun s(v: Int) = if (v > 0) "+$v" else "$v"
@@ -39,7 +56,7 @@ data class Mods(
         if (dmg != 0) add(s(dmg) + if (ru) " к урону" else " damage")
         if (def != 0) add(s(def) + if (ru) " к защите" else " armour")
         if (light != 0) add(s(light) + if (ru) " м света" else " m of light")
-        if (chase != 0) add(s(chase) + if (ru) "% быстрее погоня" else "% shorter chases")
+        if (chase != 0) add(s(chase) + if (ru) "% короче погоня" else "% shorter chases")
         if (torch != 0) add(s(torch) + if (ru) " мин факела" else " torch min")
         if (luck != 0) add(s(luck) + if (ru) " к удаче" else " luck")
         if (traps != 0) add(s(traps) + if (ru) "% обойти ловушку" else "% dodge traps")
@@ -72,7 +89,7 @@ val CLASSES = listOf(
             sk("r_eye", "Зоркий глаз", "Keen eye", Mods(light = 20)) to sk("r_step", "Лёгкий шаг", "Light step", Mods(chase = 15)),
             sk("r_hunter", "Охотник", "Hunter", Mods(atk = 2)) to sk("r_tracker", "Знаток троп", "Pathfinder", Mods(loot = 15)),
             sk("r_night", "Ночное зрение", "Night sight", Mods(light = 30)) to sk("r_wick", "Длинный факел", "Long torch", Mods(torch = 5)),
-            sk("r_aim", "Меткость", "Sharpshooter", Mods(dmg = 3)) to sk("r_dodge", "Ловкач", "Dodger", Mods(def = 2)),
+            sk("r_aim", "Меткий выстрел", "Sharpshooter", Mods(dmg = 3)) to sk("r_dodge", "Ловкач", "Dodger", Mods(def = 2)),
             sk("r_wind", "Ветер", "Wind", Mods(chase = 25)) to sk("r_luck", "Лесная удача", "Wood luck", Mods(luck = 3)),
         )),
     HeroClass("rogue", Tx("Вор", "Rogue"), Tx("Чует ловушки, вскрывает замки и находит больше добычи.", "Smells traps, opens locks and finds more loot."),
@@ -394,3 +411,15 @@ class Contract(val id: Long, val kind: String, val n: Int, val coins: Int, val s
 
 /** Depth stake: what everything carried up is multiplied by. */
 fun depthMult(maxDepth: Int): Double = (1 + .25 * (maxDepth - 1)).coerceAtMost(4.0)
+
+/** What each number of the hero means, for the hero page: icon index, name, explanation. */
+val STAT_HELP = listOf(
+    Tx("Здоровье", "Health") to Tx("Сколько ударов ты выдержишь. Кончится – очнёшься в лагере, а половина добычи останется внизу. Лечат зелья, источники и стоянки.", "How many blows you can take. When it runs out you wake at camp and half the loot stays below. Potions, springs and campsites heal."),
+    Tx("Меткость", "To hit") to Tx("Прибавка к броску кубика, когда бьёшь. Чтобы попасть, бросок с прибавкой должен догнать защиту существа.", "Added to your die roll when you strike. To hit, the roll plus this must reach the creature's armour."),
+    Tx("Урон", "Damage") to Tx("Сколько здоровья снимает удачный удар. Против панциря лучше дробящее оружие, против мягкотелых – режущее.", "How much health a hit takes. Blunt weapons are best against shells, edged ones against soft creatures."),
+    Tx("Защита", "Armour") to Tx("Чем выше, тем чаще существа промахиваются. Растёт от доспехов, щита и умений.", "The higher, the more often creatures miss. Armour, shields and skills raise it."),
+    Tx("Свет", "Light") to Tx("Как далеко видно вокруг: залы в этом круге появляются на карте раньше, чем ты в них войдёшь.", "How far you see: halls inside this circle show on the map before you enter them."),
+    Tx("Погоня", "Chase") to Tx("На столько процентов короче путь, который нужно пройти, чтобы чудовище отстало.", "How much shorter the walk you need to shake off a chaser."),
+    Tx("Удача", "Luck") to Tx("Чаще редкие вещи, удачные хитрости, приручение и обход ловушек.", "Rarer finds, better tricks, easier taming and dodging traps."),
+    Tx("Добыча", "Loot") to Tx("Больше монет и находок в сундуках и с побеждённых существ.", "More coins and finds from chests and beaten creatures."),
+)
