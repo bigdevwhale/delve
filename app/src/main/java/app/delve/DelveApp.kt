@@ -397,6 +397,7 @@ class AppContainer(context: Context) {
     fun pet(id: String?) { state?.companion = id; changed() }
     fun hintSeen(key: String) { state?.hints?.add(key); changed() }
     fun hintAgain(key: String) { state?.hints?.remove(key); changed() }
+    fun restyle(female: Boolean, name: String) { state?.let { it.female = female; it.name = name }; changed() }
     fun setVibrate(on: Boolean) { state?.vibrate = on; changed() }
 
     fun refreshWeather() {

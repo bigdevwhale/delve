@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,12 +48,16 @@ fun HeroScreen(c: AppContainer) {
     val st = remember(v) { c.game.stats(s, null) }
     var pick by remember { mutableStateOf<Long?>(null) }
     var help by remember { mutableStateOf<Int?>(null) }
+    var look by remember { mutableStateOf(false) }
     val cls = heroClass(s.cls)
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding().padding(horizontal = 16.dp)) {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.Bottom) {
-                Pic(Art.hero(s.cls, s.female), Modifier.size(150.dp))
+                Box {
+                    Pic(Art.hero(s.cls, s.female), Modifier.size(150.dp).clickable { look = true })
+                    Text("✎", style = T.Heading.copy(color = C.paper), modifier = Modifier.align(Alignment.BottomEnd).clip(CircleShape).background(C.ink).clickable { look = true }.padding(horizontal = 9.dp, vertical = 2.dp))
+                }
                 Column(Modifier.weight(1f).padding(start = 8.dp, bottom = 10.dp)) {
                     Text(s.name, style = T.Display)
                     Text(cls.name(ru) + " · " + w(ru, "уровень ${s.level}", "level ${s.level}"), style = T.Body.copy(color = C.muted))
@@ -143,6 +148,7 @@ fun HeroScreen(c: AppContainer) {
                 Btn(w(ru, "Понятно", "Got it"), Modifier.fillMaxWidth()) { help = null }
             }
         }
+        if (look) LookSheet(c, ru) { look = false }
         PageHint(c, "hero")
     }
 }
@@ -177,5 +183,34 @@ private fun ItemSheet(c: AppContainer, it: app.delve.domain.Item, ru: Boolean, o
         } else Text(w(ru, "Надето", "Worn"), style = T.Note)
         Gap(8.dp)
         Btn(w(ru, "Закрыть", "Close"), Modifier.fillMaxWidth(), BtnKind.LINE) { onClose() }
+    }
+}
+
+/** The hero's look and name, changeable any time; the class stays, the skills hang on it. */
+@Composable
+private fun LookSheet(c: AppContainer, ru: Boolean, onClose: () -> Unit) {
+    val s = c.state ?: return
+    var female by remember { mutableStateOf(s.female) }
+    var name by remember { mutableStateOf(s.name) }
+    Sheet(onClose) {
+        Text(w(ru, "Облик героя", "The hero's look"), style = T.Title)
+        Gap(8.dp)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            for (f in listOf(false, true)) {
+                Column(Modifier.weight(1f).paper(if (female == f) C.floor else C.paper, ink = if (female == f) C.gold else C.ink).clickable { female = f }.padding(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    Pic(Art.hero(s.cls, f), Modifier.size(140.dp))
+                    Text(if (f) w(ru, "Она", "She") else w(ru, "Он", "He"), style = T.Heading.copy(color = if (female == f) C.ink else C.muted))
+                }
+            }
+        }
+        Gap(10.dp)
+        androidx.compose.material3.OutlinedTextField(name, { name = it.take(20) }, Modifier.fillMaxWidth(), singleLine = true,
+            label = { Text(w(ru, "Имя", "Name"), style = T.Body.copy(color = androidx.compose.ui.graphics.Color.Unspecified)) }, textStyle = T.Body,
+            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedBorderColor = C.ink, unfocusedBorderColor = C.ink.copy(alpha = .5f), focusedLabelColor = C.ink))
+        Gap(6.dp)
+        Text(w(ru, "Класс не меняется: от него зависят умения.", "The class stays: the skills depend on it."), style = T.Small)
+        Gap()
+        Btn(w(ru, "Сохранить", "Save"), Modifier.fillMaxWidth(), BtnKind.INK, enabled = name.isNotBlank()) { c.restyle(female, name.trim()); onClose() }
     }
 }

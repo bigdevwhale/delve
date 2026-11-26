@@ -180,9 +180,31 @@ private fun SettingsSheet(c: AppContainer, onClose: () -> Unit) {
         Gap(8.dp)
         Btn(w(ru, "Загрузить из файла", "Load from a file"), Modifier.fillMaxWidth(), BtnKind.LINE) { load.launch(arrayOf("application/json", "text/plain", "*/*")) }
         Gap()
+        Text(w(ru, "СООБЩЕСТВО", "COMMUNITY"), style = T.Eyebrow)
+        Gap(6.dp)
+        val open = { url: String -> runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) } }
+        for ((label, url) in listOf(
+            w(ru, "🐞 Сообщить об ошибке", "🐞 Report a bug") to Community.BUG,
+            w(ru, "💡 Предложить идею", "💡 Suggest an idea") to Community.IDEA,
+            w(ru, "🔔 Следить за обновлениями", "🔔 Follow updates") to Community.FOLLOW,
+            w(ru, "💬 Чат StillCraft", "💬 StillCraft chat") to Community.CHAT,
+            w(ru, "❤ Поддержать", "❤ Support") to Community.SUPPORT,
+        )) { Btn(label, Modifier.fillMaxWidth(), BtnKind.LINE) { open(url) }; Gap(6.dp) }
+        Gap()
         Text(w(ru, "Карта © участники OpenStreetMap. Погода – MET Norway.", "Map © OpenStreetMap contributors. Weather: MET Norway."), style = T.Small, textAlign = TextAlign.Center)
         Gap(8.dp)
         Btn(w(ru, "Закрыть", "Close"), Modifier.fillMaxWidth()) { onClose() }
         Box(Modifier.height(4.dp))
     }
+}
+
+/** The StillCraft bot: deep links file a bug or an idea for this app, or follow its releases. */
+object Community {
+    private const val BOT = "https://t.me/ArcaneWhisperBot?start="
+    const val SLUG = "delve"
+    const val BUG = "${BOT}bug_$SLUG"
+    const val IDEA = "${BOT}wish_$SLUG"
+    const val FOLLOW = "${BOT}f_$SLUG"
+    const val CHAT = "https://t.me/+Q4gFEDk8O842OGVi"
+    const val SUPPORT = "https://bigdevwhale.github.io/stillcraft/support/"
 }
