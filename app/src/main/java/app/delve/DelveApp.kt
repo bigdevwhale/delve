@@ -330,6 +330,19 @@ class AppContainer(context: Context) {
         changed()
     }
 
+    /** The hero fights the rest alone. */
+    fun autoFight() {
+        val s = state ?: return
+        val b = battle.value ?: return
+        val out = ArrayList<Ev>()
+        synchronized(this) { game.auto(s, b, out) }
+        battle.value = null
+        toasts.value = (toasts.value + out.filter { it is Ev.LevelUp }).takeLast(4)
+        events.value = out.filter { it is Ev.Fought } + events.value
+        checkEnd()
+        changed()
+    }
+
     fun takeOrder(id: Long) { state?.let { game.takeOrder(it, id) }; changed() }
     fun dropOrder(id: Long) { state?.let { game.dropOrder(it, id) }; changed() }
     fun board() { val s = state ?: return; if (s.boardDay != LocalDate.now().toEpochDay() || s.board.isEmpty()) { game.board(s, LocalDate.now().toEpochDay()); changed() } }

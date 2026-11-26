@@ -581,7 +581,7 @@ class Game {
         return when (f.beast.trait()) {
             Trait.ARMOR -> if (blunt) 1.5 else .5
             Trait.SOFT -> if (blunt) .5 else 1.5
-            Trait.GHOST -> .35
+            Trait.GHOST -> .7
             else -> 1.0
         }
     }
@@ -649,6 +649,14 @@ class Game {
             out.add(0, Ev.Fought(f, false, b.log, b.lost, 0, emptyList(), emptyMap(), true))
         } else out.add(0, Ev.Fought(f, false, b.log, b.lost, 0, emptyList(), emptyMap(), false))
         return true
+    }
+
+    /** The sensible move: guard against a wind-up, strike otherwise. */
+    fun advice(b: Battle): Move = if (b.intent == Intent.HEAVY) Move.GUARD else Move.STRIKE
+
+    /** The hero fights it out alone, round by round, always making the sensible move. */
+    fun auto(s: GameState, b: Battle, out: MutableList<Ev>) {
+        while (!move(s, b, advice(b), out)) Unit
     }
 
     // ——— the guild's board ———

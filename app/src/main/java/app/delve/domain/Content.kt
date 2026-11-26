@@ -337,10 +337,10 @@ enum class Trait(val title: Tx, val hint: Tx) {
     NONE(Tx("", ""), Tx("", "")),
     ARMOR(Tx("Панцирь", "Armoured"), Tx("Режущее оружие почти не берёт, дробящее – бьёт вдвойне.", "Blades barely bite; blunt weapons hit twice as hard.")),
     SOFT(Tx("Мягкотелый", "Soft"), Tx("Дробящее вязнет, режущее – рассекает.", "Blunt weapons sink in; blades cut deep.")),
-    SWIFT(Tx("Юркий", "Quick"), Tx("По нему трудно попасть ударом. Хитрость работает лучше.", "Hard to hit with a blow. Tricks work better.")),
-    BRUTE(Tx("Громила", "Brute"), Tx("Часто замахивается со всей силы – вовремя защищайся.", "Often swings with all its might: guard in time.")),
+    SWIFT(Tx("Юркий", "Quick"), Tx("По нему трудно попасть.", "Hard to hit.")),
+    BRUTE(Tx("Громила", "Brute"), Tx("Часто замахивается – вовремя защищайся.", "Often winds up: guard in time.")),
     SHY(Tx("Боится света", "Light-shy"), Tx("Если твой свет дальше 60 м, бьёт слабее.", "If your light reaches past 60 m, it hits softer.")),
-    GHOST(Tx("Бесплотный", "Ghostly"), Tx("Удары проходят насквозь. Помогает только хитрость… или защита.", "Blows pass right through. Only tricks help… or guarding.")),
+    GHOST(Tx("Бесплотный", "Ghostly"), Tx("Удары наполовину проходят насквозь.", "Blows half pass right through.")),
 }
 
 val TRAITS: Map<String, Trait> = mapOf(
@@ -361,9 +361,9 @@ val BLUNT = setOf("mace", "staff", "sling", "pickaxe")
 
 /** What the creature means to do this round: shown above it, so the hero can answer. */
 enum class Intent(val title: Tx, val hint: Tx) {
-    ATTACK(Tx("Атакует", "Attacks"), Tx("обычный удар", "a normal blow")),
-    HEAVY(Tx("Замахивается!", "Winds up!"), Tx("двойной урон – лучше защититься", "double damage: better guard")),
-    GUARD(Tx("Прикрылся", "Guards"), Tx("удар отскочит – попробуй хитрость", "a blow will bounce off: try a trick")),
+    ATTACK(Tx("Готовится ударить", "About to strike"), Tx("обычный удар – бей первым", "a normal blow: hit first")),
+    HEAVY(Tx("Замахивается!", "Winds up!"), Tx("ударит вдвое сильнее – защитись", "it will hit twice as hard: guard")),
+    GUARD(Tx("Прячется", "Hides"), Tx("попасть труднее, зато оно не бьёт", "harder to hit, but it won't strike")),
 }
 
 enum class Move(val title: Tx, val hint: Tx) {

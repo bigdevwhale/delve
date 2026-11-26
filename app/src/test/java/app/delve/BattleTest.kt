@@ -13,12 +13,7 @@ import org.junit.Test
 
 /** The moves must matter: answering the intent should beat mashing «Strike». */
 class BattleTest {
-    private fun smart(b: Battle): Move = when {
-        b.intent == Intent.HEAVY -> Move.GUARD
-        b.intent == Intent.GUARD -> Move.TRICK
-        b.foe.beast.trait() == Trait.SWIFT || b.foe.beast.trait() == Trait.GHOST -> Move.TRICK
-        else -> Move.STRIKE
-    }
+    private fun smart(b: Battle): Move = Game().advice(b)
 
     private fun play(ids: List<String>, depth: Int, pick: (Battle) -> Move): Pair<Double, Double> {
         val g = Game()

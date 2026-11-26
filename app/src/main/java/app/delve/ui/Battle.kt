@@ -42,7 +42,7 @@ import app.delve.ui.theme.C
 import app.delve.ui.theme.T
 import kotlinx.coroutines.delay
 
-/** The fight in rounds: the creature shows its intent, the hero picks one of three moves. */
+/** The fight, simple: the creature shows what it is about to do; strike or guard, or let the hero fight alone. */
 @Composable
 fun BattleSheet(c: AppContainer) {
     val b by c.battle.collectAsState()
@@ -54,60 +54,54 @@ fun BattleSheet(c: AppContainer) {
     val f = battle.foe
     val st = c.game.stats(s)
     val trait = f.beast.trait()
+    val best = c.game.advice(battle)
     v.let { }
     Sheet(null) {
-        Text(w(ru, "РАУНД ${battle.round + 1}", "ROUND ${battle.round + 1}"), style = T.Eyebrow.copy(color = C.red))
-        Pic(Art.beast(f.beast.id), Modifier.size(140.dp))
+        // the creature, its health under it, and what it is about to do
+        Pic(Art.beast(f.beast.id), Modifier.size(150.dp))
         Text(f.beast.name(ru), style = T.Title)
-        if (trait != Trait.NONE) {
-            Text(trait.title(ru) + ": " + trait.hint(ru), style = T.Small.copy(color = C.ink2), textAlign = TextAlign.Center)
-        }
-        Gap(8.dp)
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(w(ru, "Оно", "It"), style = T.Small, modifier = Modifier.size(42.dp, 18.dp))
-            Bar(battle.hp.toFloat() / f.hp, C.red, Modifier.weight(1f), 9.dp)
-            Text(" ${maxOf(0, battle.hp)}", style = T.Strong, modifier = Modifier.size(42.dp, 22.dp))
-        }
-        Gap(4.dp)
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(w(ru, "Ты", "You"), style = T.Small, modifier = Modifier.size(42.dp, 18.dp))
-            Bar(run.hp.toFloat() / st.maxHp, C.green, Modifier.weight(1f), 9.dp)
-            Text(" ${run.hp}", style = T.Strong, modifier = Modifier.size(42.dp, 22.dp))
-        }
+        if (trait != Trait.NONE) Text(trait.title(ru) + " – " + trait.hint(ru).replaceFirstChar { it.lowercase() }, style = T.Small, textAlign = TextAlign.Center)
+        Gap(6.dp)
+        Bar(battle.hp.toFloat() / f.hp, C.red, Modifier.fillMaxWidth(.7f), 10.dp)
         Gap(10.dp)
-        // what it is about to do
-        val (ic, col) = when (battle.intent) { Intent.HEAVY -> "⚡" to C.red; Intent.GUARD -> "◈" to C.blue; Intent.ATTACK -> "⚔" to C.ink }
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(col.copy(alpha = .1f)).border(1.4.dp, col, RoundedCornerShape(10.dp)).padding(10.dp),
+        val col = when (battle.intent) { Intent.HEAVY -> C.red; Intent.GUARD -> C.blue; Intent.ATTACK -> C.ink }
+        Column(Modifier.clip(RoundedCornerShape(20.dp)).background(col.copy(alpha = .1f)).border(1.5.dp, col, RoundedCornerShape(20.dp)).padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("$ic  " + battle.intent.title(ru), style = T.Heading.copy(color = col))
+            Text(battle.intent.title(ru), style = T.Heading.copy(color = col))
             Text(battle.intent.hint(ru), style = T.Small)
         }
+        Gap(14.dp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MoveButton(Move.STRIKE, 2, w(ru, "Ударить", "Strike"), best == Move.STRIKE, Modifier.weight(1f)) { c.move(Move.STRIKE) }
+            MoveButton(Move.GUARD, 3, w(ru, "Защититься", "Guard"), best == Move.GUARD, Modifier.weight(1f)) { c.move(Move.GUARD) }
+        }
         Gap(10.dp)
+        // your health and what just happened
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Pic(statIcon(0), Modifier.size(22.dp)); HGap(6.dp)
+            Bar(run.hp.toFloat() / st.maxHp, C.green, Modifier.weight(1f), 9.dp)
+            Text("  ${run.hp}/${st.maxHp}", style = T.Strong)
+        }
+        battle.log.lastOrNull()?.let { Gap(6.dp); Text(it(ru), style = T.Small.copy(color = C.ink2), textAlign = TextAlign.Center) }
+        Gap(12.dp)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (m in Move.entries) {
-                val kind = when (m) { Move.STRIKE -> BtnKind.WAX; Move.GUARD -> BtnKind.INK; Move.TRICK -> BtnKind.GOLD }
-                Btn(m.title(ru), Modifier.weight(1f), kind, sub = m.hint(ru)) { c.move(m) }
-            }
-        }
-        Gap(8.dp)
-        val weapon = s.equippedIn(Slot.WEAPON)
-        val k = c.game.weaponK(s, f)
-        if (weapon != null) Text(
-            w(ru, "Твоё оружие: ${weapon.name(true).lowercase()} (${if (weapon.base in BLUNT) "дробящее" else "режущее"})", "Your weapon: ${weapon.name(false).lowercase()} (${if (weapon.base in BLUNT) "blunt" else "edged"})") +
-                if (k != 1.0) " · ×" + "%.1f".format(k) else "",
-            style = T.Small.copy(color = if (k > 1) C.green else if (k < 1) C.red else C.muted), textAlign = TextAlign.Center)
-        if (battle.log.isNotEmpty()) {
-            Gap(8.dp)
-            Column(Modifier.fillMaxWidth().paper(C.floor).padding(10.dp)) {
-                for (l in battle.log.takeLast(4)) Text("· " + l(ru), style = T.Small.copy(color = C.ink2))
-            }
-        }
-        val potions = c.game.count(s, "potion")
-        if (potions > 0 && run.hp < st.maxHp) {
-            Gap(8.dp)
-            Btn(w(ru, "Выпить зелье (×$potions)", "Drink a potion (×$potions)"), Modifier.fillMaxWidth(), BtnKind.LINE) { c.drink() }
+            Btn(w(ru, "Пусть бьётся сам", "Let the hero fight"), Modifier.weight(1f), BtnKind.LINE) { c.autoFight() }
+            val potions = c.game.count(s, "potion")
+            if (potions > 0 && run.hp < st.maxHp) Btn(w(ru, "Зелье ×$potions", "Potion ×$potions"), Modifier.weight(1f), BtnKind.LINE) { c.drink() }
         }
     }
+}
+
+/** A big move button with its icon; the sensible one glows. */
+@Composable
+private fun MoveButton(m: Move, icon: Int, label: String, best: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Column(modifier.clip(RoundedCornerShape(14.dp)).background(if (best) C.ink else C.floor)
+        .border(if (best) 3.dp else 1.5.dp, if (best) C.gold else C.ink.copy(alpha = .5f), RoundedCornerShape(14.dp))
+        .clickable(onClick = onClick).padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Pic(statIcon(icon), Modifier.size(52.dp))
+        Text(label, style = T.Heading.copy(color = if (best) C.gold else C.ink))
+    }
+    @Suppress("UNUSED_EXPRESSION") m
 }
 
 /** Quiet news slides in under the floor name for a few seconds, then goes to the journal. */
