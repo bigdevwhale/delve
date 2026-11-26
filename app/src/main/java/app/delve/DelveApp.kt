@@ -226,6 +226,8 @@ class AppContainer(context: Context) {
      */
     @Synchronized
     fun fix(raw: Fix) {
+        // debug: once the hero is walked by taps, the real GPS keeps out of it until the expedition ends
+        if (manual && !raw.simulated) return
         val step = track.add(raw)
         if (step == null) {
             if (!raw.gps && !track.hasGps(raw.time)) here.value = Geo(raw.lat, raw.lon)
@@ -287,6 +289,7 @@ class AppContainer(context: Context) {
         val e = game.end(s, System.currentTimeMillis(), LocalDate.now().toEpochDay(), how)
         events.value = listOf(e)
         floorKey = null
+        manual = false
         WalkService.stop(app)
         if (!visible) push(listOf(e))
         changed()
@@ -380,6 +383,8 @@ class AppContainer(context: Context) {
     }
 
     private var walkJob: kotlinx.coroutines.Job? = null
+    /** Debug builds: the hero is being walked by taps, not by the GPS. */
+    @Volatile var manual = false
 
     /** Debug and demo: walks the hero in small steps to a map point, as the GPS would. */
     fun walkTo(x: Float, y: Float) {
@@ -405,6 +410,7 @@ class AppContainer(context: Context) {
         if (pts.isEmpty()) { pts += from; pts += Geo(d.lat(y), d.lon(x)) }
         // a new tap changes course: the walk in progress stops where it is
         walkJob?.cancel()
+        if (!BuildConfig.DEMO) manual = true
         walkJob = scope.launch {
             var prev = from
             for (to in pts) {

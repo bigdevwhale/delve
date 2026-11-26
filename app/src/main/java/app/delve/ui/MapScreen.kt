@@ -147,7 +147,7 @@ fun DungeonScreen(c: AppContainer, onBag: () -> Unit) {
                     }
                     // the demo: a tap walks the hero to the hall nearest to it; debug builds: a long press
                     detectTapGestures(
-                        onTap = { p -> if (BuildConfig.DEMO) go(p) },
+                        onTap = { p -> if (BuildConfig.DEMO || BuildConfig.DEBUG) go(p) },
                         onLongPress = { p -> if (BuildConfig.DEMO || BuildConfig.DEBUG) go(p) },
                     )
                 }
@@ -227,6 +227,12 @@ fun DungeonScreen(c: AppContainer, onBag: () -> Unit) {
                 }
             }
             Gap(8.dp)
+            if (c.manual && !BuildConfig.DEMO) {
+                Text(w(ru, "Отладка: героя ведут тапы, GPS выключен до конца вылазки", "Debug: taps walk the hero, GPS is off until the expedition ends"),
+                    style = T.Small.copy(color = C.paper), textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(C.blue.copy(alpha = .85f)).padding(6.dp))
+                Gap(6.dp)
+            }
             val riding by c.riding.collectAsState()
             if (riding) {
                 Text(w(ru, "Слишком быстро: подземелье ждёт пешехода. Транспорт не считается.", "Too fast: the dungeon waits for someone on foot. Rides don't count."),
