@@ -6,6 +6,20 @@ line "<!-- tg", then 2-4 short lines in Russian for users (what is new, what is 
 then close it like any HTML comment. The release notes carry it, and the chat bot posts those lines.
 -->
 
+## [1.1.0] - 2026-11-26
+
+- Creatures adapt to the hero: a quarter of their numbers come from the floor, three quarters from the hero's own, so gear helps but fights stay tense; deeper floors push harder.
+- One elite per floor: tougher, twice the experience, better loot.
+- The torch burns faster on deeper floors.
+- «Gloom»: optional challenge levels in the roguelike way, one opened per floor master beaten; each adds a rule and pays 15% more.
+
+<!-- tg
+Подземелье стало труднее, как настоящий рогалик: существа подстраиваются под силу героя, и бои снова требуют внимания.
+На каждом этаже появилась элита – она сильнее, но и добыча с неё лучше.
+Чем глубже, тем быстрее горит факел.
+Новое испытание «Мрак»: за каждого побеждённого хозяина этажа открывается уровень сложности с наградой побольше.
+-->
+
 ## [1.0.0] - 2026-11-26
 
 First release.

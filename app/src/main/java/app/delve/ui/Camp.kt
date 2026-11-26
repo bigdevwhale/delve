@@ -308,6 +308,28 @@ private fun DescentCard(c: AppContainer, s: app.delve.domain.GameState, extra: I
                     }
                 }
             }
+            val open = c.game.gloomOpen(s)
+            if (open > 0) {
+                Gap(14.dp)
+                Text(w(ru, "Мрак – испытание по желанию", "Gloom – a challenge if you want it"), style = T.Small.copy(color = C.paper.copy(alpha = .7f)))
+                Gap(6.dp)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (lv in 0..open) {
+                        val on = s.gloom.coerceAtMost(open) == lv
+                        Box(Modifier.size(40.dp).clip(CircleShape).background(if (on) Color(0xFF5B2A6E) else Color.White.copy(alpha = .05f))
+                            .border(if (on) 2.dp else 1.dp, if (on) Color(0xFFC79BE0) else C.paper.copy(alpha = .25f), CircleShape)
+                            .clickable { s.gloom = lv; c.changed() }, contentAlignment = Alignment.Center) {
+                            Text(if (lv == 0) "–" else "$lv", style = T.Heading.copy(color = if (on) Color(0xFFE8D5F2) else C.paper.copy(alpha = .7f)))
+                        }
+                    }
+                }
+                val g = s.gloom.coerceAtMost(open)
+                if (g > 0) {
+                    Gap(6.dp)
+                    for (i in 0 until g) Text("☾ " + app.delve.domain.GLOOM[i].first(ru) + ": " + app.delve.domain.GLOOM[i].second(ru), style = T.Small.copy(color = Color(0xFFD9C2E6)))
+                    Text(w(ru, "Награда: +${15 * g}% монет, материалов и опыта", "Reward: +${15 * g}% coins, materials and experience"), style = T.Strong.copy(color = Flame, fontSize = T.Small.fontSize))
+                } else Text(w(ru, "Каждый побеждённый хозяин этажа открывает новый уровень.", "Each floor master beaten opens a new level."), style = T.Small.copy(color = C.paper.copy(alpha = .55f)))
+            }
             Gap(6.dp)
             Text(w(ru, "≈ ${s.torchPick * 75 / 100 * 100} м прогулки", "≈ ${s.torchPick * 75 / 100 * 100} m of walking") + if (extra > 0) w(ru, " · +$extra мин от снаряжения", " · +$extra min from gear") else "",
                 style = T.Small.copy(color = C.paper.copy(alpha = .6f)), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)

@@ -29,6 +29,9 @@ class Floor(val g: Graph, val d: District, val depth: Int, val seed: Long, val s
     val ups: List<Int>
     /** Metres from the start to every node along open corridors. */
     val dist: Map<Int, Double>
+    /** The lair whose creature is an elite: tougher, and with better loot. */
+    var elite = -1
+        private set
 
     init {
         val rnd = Random(seed * 31 + depth * 7919L + start)
@@ -109,6 +112,8 @@ class Floor(val g: Graph, val d: District, val depth: Int, val seed: Long, val s
                 r[n] = Room(n, kind, beast, if (kind == place?.first) place.second else "")
             }
         }
+        // one elite per floor: in the lair farthest from the start
+        elite = rooms.values.filter { it.kind == RoomKind.LAIR }.maxByOrNull { dist[it.node] ?: 0.0 }?.node ?: -1
     }
 
     private fun pick(rnd: Random, deg: Int): RoomKind {

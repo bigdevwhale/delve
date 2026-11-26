@@ -204,7 +204,7 @@ fun DungeonScreen(c: AppContainer, onBag: () -> Unit) {
         Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Hud(run.depth, left = c.game.torchLeft(run, now), total = run.torchMin.toDouble(), hp = run.hp, maxHp = stats.maxHp, ru = ru)
             Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
-                Text("${w(ru, "Этаж", "Floor")} ${run.depth} · ${floorName(run.depth, ru)}" + if (run.stake() > 1) "  ·  ×" + fmt(run.stake()) else "", style = T.Heading.copy(fontSize = T.Heading.fontSize),
+                Text("${w(ru, "Этаж", "Floor")} ${run.depth} · ${floorName(run.depth, ru)}" + (if (run.stake() > 1) "  ·  ×" + fmt(run.stake()) else "") + (if (run.gloom > 0) "  ·  ☾${run.gloom}" else "") + (c.game.burnRate(run).let { r -> if (r > 1.0) "  ·  🔥×" + fmt(r) else "" }), style = T.Heading.copy(fontSize = T.Heading.fontSize),
                     modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(C.paper.copy(alpha = .86f)).border(1.dp, C.ink.copy(alpha = .5f), RoundedCornerShape(20.dp)).padding(horizontal = 14.dp, vertical = 3.dp))
             }
         }

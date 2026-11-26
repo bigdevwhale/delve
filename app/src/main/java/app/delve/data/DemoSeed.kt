@@ -66,6 +66,7 @@ object DemoSeed {
             "goblin" to Lore(1, 1), "candlewraith" to Lore(1, 0), "mimic" to Lore(1, 1), "toad" to Lore(1, 1), "ratking" to Lore(1, 1))) s.lore[id] = l
         s.companion = "firefly"
         s.deepest = 6; s.metres = 23_400.0
+        s.camps += 6   // the rat king of floor 5 is beaten: a deep camp and the first «Мрак» level are open
         val today = LocalDate.now().toEpochDay()
         val trail = listOf(59.9572, 30.3135, 59.9578, 30.3150, 59.9586, 30.3171, 59.9580, 30.3195, 59.9566, 30.3203, 59.9555, 30.3180, 59.9560, 30.3150)
         s.logs += RunLog(today - 1, 6, 2870, 41, 23, 7, 118, 3, 640, "up", trail)

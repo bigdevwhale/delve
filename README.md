@@ -3,7 +3,7 @@
 <h1 align="center">Delve</h1>
 
 <p align="center">A walking game: a dungeon lies under your district, and its plan follows your streets.<br>
-<a href="https://bigdevwhale.github.io/stillcraft/apps/delve/">Website</a> · <a href="https://github.com/bigdevwhale/delve/releases/latest/download/Delve.apk">Download APK</a> · <a href="README.md">Русский</a></p>
+<a href="https://bigdevwhale.github.io/stillcraft/apps/delve/">Website</a> · <a href="https://github.com/bigdevwhale/delve/releases/latest/download/Delve.apk">Download APK</a> · <a href="README.ru.md">Русский</a></p>
 
 Step outside, light the torch and go for a walk – while on the phone you go down into a dungeon. A street becomes a corridor, a crossing a hall, a block solid rock. Somewhere on each floor are the stairs down: the deeper, the more danger and the richer the loot. The torch is your walk's length: 15, 30, 45 or 60 minutes.
 

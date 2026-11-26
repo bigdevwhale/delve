@@ -74,6 +74,7 @@ class AppContainer(context: Context) {
     /** True while the phone moves faster than a walker: the dungeon waits. */
     val riding = MutableStateFlow(false)
     private var warned = 0
+    private var lastBurn = 0L
 
     fun changed() {
         state?.let { store.save(it) }
@@ -269,6 +270,11 @@ class AppContainer(context: Context) {
         val s = state ?: return
         val run = s.run ?: return
         val now = System.currentTimeMillis()
+        if (lastBurn > 0 && now > lastBurn) {
+            val extra = ((now - lastBurn).coerceAtMost(120_000L) * (game.burnRate(run) - 1)).toLong()
+            run.torchEnd -= extra
+        }
+        lastBurn = now
         val left = game.torchLeft(run, now)
         if (left <= 5 && warned < 1) { warned = 1; if (s.vibrate) Buzz.play(app, Buzz.WARN) }
         if (left <= 1 && warned < 2) { warned = 2; if (s.vibrate) Buzz.play(app, Buzz.WARN) }

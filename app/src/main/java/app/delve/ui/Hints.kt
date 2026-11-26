@@ -43,6 +43,7 @@ fun hint(key: String, ru: Boolean): Hint = when (key) {
         w(ru, "Лестница ведёт глубже, колодец – наверх в лагерь со всей добычей.", "Stairs lead deeper, a well takes you up to camp with all your loot."),
         w(ru, "Следи за факелом вверху: если он погаснет, половина добычи останется внизу.", "Watch the torch at the top: if it goes out, half the loot stays below."),
         w(ru, "Груды камней – обвалы. Пролезть можно, но факел закоптится.", "Heaps of stones are cave-ins. You can squeeze through, but the torch gets sooty."),
+        w(ru, "Чем глубже, тем быстрее горит факел и тем злее существа: они подстраиваются под твою силу. На каждом этаже есть одна элита – сильнее, но с лучшей добычей.", "The deeper you go, the faster the torch burns and the fiercer the creatures: they match your strength. Each floor has one elite – tougher, with better loot."),
     ))
     "hero" -> Hint(w(ru, "Герой", "The hero"), listOf(
         w(ru, "Наверху – числа героя: от них зависят бой, погоня и свет фонаря.", "At the top are your numbers: they decide fights, chases and how far your light reaches."),

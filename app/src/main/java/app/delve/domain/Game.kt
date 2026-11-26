@@ -11,7 +11,7 @@ data class Stats(val maxHp: Int, val atk: Int, val def: Int, val dmg: Int, val l
                  val luck: Int, val traps: Int, val loot: Int, val heal: Int, val sell: Int)
 
 /** A creature's numbers at a tier. */
-data class Foe(val beast: Beast, val tier: Int, val hp: Int, val atk: Int, val def: Int, val dmg: Int, val stamina: Int, val xp: Int, val coins: Int, val boss: Boolean)
+data class Foe(val beast: Beast, val tier: Int, val hp: Int, val atk: Int, val def: Int, val dmg: Int, val stamina: Int, val xp: Int, val coins: Int, val boss: Boolean, val elite: Boolean = false)
 
 /** Something the screen must show: a room's contents, a fight, a question. */
 sealed class Ev {
@@ -87,12 +87,53 @@ class Game {
         )
     }
 
+    /**
+     * The creature as the hero meets it. A quarter of its numbers come from its kind and the floor, three quarters adapt to the hero:
+     * its health to the hero's blows (about three to four hits), its damage to the hero's health, its aim to the
+     * hero's armour – so better gear helps, but never makes the dungeon toothless. Deeper floors push all of it up.
+     */
+    fun foeFor(s: GameState, b: Beast, depth: Int, night: Boolean, elite: Boolean = false): Foe {
+        val a = foe(b, depth, night)
+        val st = stats(s)
+        val gloom = s.run?.gloom ?: 0
+        val d = depth.toDouble()
+        val boss = a.boss
+        val hits = (2.8 + .1 * d).coerceAtMost(5.0) * (if (boss) 3.0 else 1.0)
+        val hpR = hits * (st.dmg + 2.5)
+        val hitMe = (.5 + .02 * d).coerceAtMost(.78)
+        val atkR = st.def - 21 + 20 * hitMe
+        val dmgR = st.maxHp * (.08 + .008 * d).coerceAtMost(.2) * (if (boss) 1.3 else 1.0)
+        val myHit = (.78 - .01 * d).coerceAtLeast(.55)
+        val defR = st.atk + 21 - 20 * myHit
+        var k = (if (night && !boss) 1.15 else 1.0) * (if (gloom >= 1) 1.15 else 1.0)
+        if (elite || boss) k *= if (gloom >= 5) 1.33 else 1.0
+        val eHp = if (elite) 1.6 else 1.0; val eDmg = if (elite) 1.3 else 1.0
+        return a.copy(
+            hp = max(3, (mix(a.hp.toDouble(), hpR) * k * eHp).roundToInt()),
+            atk = mix(a.atk.toDouble(), atkR).roundToInt() + if (elite) 1 else 0,
+            def = mix(a.def.toDouble(), defR).roundToInt() + if (elite) 1 else 0,
+            dmg = max(1, (mix(a.dmg.toDouble(), dmgR) * k * eDmg).roundToInt()),
+            xp = (a.xp * (if (elite) 2.0 else 1.0)).roundToInt(),
+            coins = (a.coins * (if (elite) 2.5 else 1.0)).roundToInt(),
+            elite = elite,
+        )
+    }
+
+    /** A quarter from the kind and the floor, three quarters adapted to the hero. */
+    private fun mix(fixed: Double, adapted: Double) = fixed * .25 + adapted * .75
+
     fun foe(b: Beast, depth: Int, night: Boolean): Foe {
         val boss = b.hab == Hab.BOSS
         val t = b.tier + max(0, (depth - b.min) / 3) + if (night && !boss) 1 else 0
         val hp = (4 + 5 * t) * (if (boss) 3 else 1)
         return Foe(b, t, hp, 1 + t, 6 + t, 1 + (t * 1.6).roundToInt(), ((120 + 45 * t) * if (boss) 1.6 else 1.0).toInt(), 12 * t * if (boss) 3 else 1, 4 * t * if (boss) 4 else 1, boss)
     }
+
+    /** «Мрак» levels open: one per floor master beaten. */
+    fun gloomOpen(s: GameState) = s.camps.size.coerceAtMost(GLOOM.size)
+
+    /** How much faster than real time the torch burns on a floor: the deep air eats it. */
+    fun burnRate(run: Run) = 1.0 + (.03 * (run.depth - 1)).coerceAtMost(.5)
 
     fun need(level: Int) = 60 * level + 20 * level * level
 
@@ -114,6 +155,8 @@ class Game {
         val depth = if (s.startDepth in s.camps) s.startDepth else 1
         val run = Run(seed, depth, start, now, now + (minutes + st.torch) * 60_000L, minutes + st.torch, st.maxHp)
         run.from = depth; run.maxDepth = depth
+        run.gloom = s.gloom.coerceIn(0, gloomOpen(s))
+        if (run.gloom >= 2) run.torchEnd -= ((minutes + st.torch) * 60_000L * .15).toLong()
         s.run = run
         return run
     }
@@ -143,7 +186,7 @@ class Game {
         val st = stats(s)
         while (ch.left > 0 && ch.total - ch.left >= ch.nextBite) {
             ch.nextBite += 110.0
-            val f = foe(beast(ch.beast), run.depth, false)
+            val f = foeFor(s, beast(ch.beast), run.depth, false)
             val r = rnd(run, 77 + ch.nextBite.toInt())
             if (r.nextInt(20) + 1 + f.atk >= st.def) {
                 val d = max(1, f.dmg - 1 + r.nextInt(3))
@@ -154,7 +197,7 @@ class Game {
         }
         if (ch.left <= 0) {
             run.chase = null
-            val f = foe(beast(ch.beast), run.depth, false)
+            val f = foeFor(s, beast(ch.beast), run.depth, false)
             val r = rnd(run, 5)
             val (coins, items, stuff) = spoils(s, f, r)
             lore(s, f.beast.id).beaten++; camp(s, f)
@@ -225,6 +268,7 @@ class Game {
         val run = s.run ?: return
         val n = room.node
         val st = stats(s)
+        bitter = run.gloom >= 3
         val r = rnd(run, n)
         val done = n in run.resolved
         // the merchant greets you on the first visit; afterwards a tap on the room card calls him
@@ -235,7 +279,7 @@ class Game {
                 out += Ev.News(room.kind, Tx("Тише…", "Quiet…"), Tx("${beast(id).name.ru} спит. Сначала оторвись от погони, потом возвращайся.", "${beast(id).name.en} is asleep. Shake off your chaser first, then come back."))
                 return
             }
-            val fo = foe(beast(id), run.depth, cond.night)
+            val fo = foeFor(s, beast(id), run.depth, cond.night, n == f.elite)
             lore(s, id).met++
             out += Ev.Meet(n, fo)
         }
@@ -262,10 +306,10 @@ class Game {
             }
             RoomKind.TRAP -> if (!done) {
                 run.resolved += n
-                if (r.nextInt(100) < 30 + st.traps + st.luck * 3) {
+                if (r.nextInt(100) < 30 + st.traps + st.luck * 3 - (if (run.gloom >= 6) 20 else 0)) {
                     out += Ev.News(room.kind, Tx("Ловушка!", "A trap!"), Tx("Ты вовремя заметил плиту в полу и перешагнул.", "You spot the pressure plate in time and step over it."))
                 } else {
-                    val d = 3 + r.nextInt(3) + run.depth
+                    val d = (3 + r.nextInt(3) + run.depth) * (if (run.gloom >= 6) 2 else 1)
                     run.hp -= d
                     out += Ev.News(room.kind, Tx("Ловушка!", "A trap!"), Tx("Из стены выскочили шипы. −$d здоровья.", "Spikes shoot out of the wall. −$d health."), hpDelta = -d)
                 }
@@ -313,7 +357,8 @@ class Game {
         }
     }
 
-    private fun heal(st: Stats, base: Int) = base * (100 + st.heal) / 100
+    private var bitter = false
+    private fun heal(st: Stats, base: Int) = base * (100 + st.heal) / 100 / (if (bitter) 2 else 1)
 
     private fun take(run: Run, coins: Int, items: List<Item>, stuff: Map<String, Int>) {
         run.coins += coins; run.bag += items
@@ -350,7 +395,7 @@ class Game {
         val st = stats(s)
         val coins = (f.coins * (1 + r.nextDouble()) * (100 + st.loot) / 100).toInt()
         val items = ArrayList<Item>()
-        if (f.boss || r.nextDouble() < .3 + st.luck * .02) items += newItem(s, r, run.depth + if (f.boss) 3 else 0, st.luck + if (f.boss) 6 else 0)
+        if (f.boss || f.elite || r.nextDouble() < .3 + st.luck * .02) items += newItem(s, r, run.depth + if (f.boss || f.elite) 3 else 0, st.luck + if (f.boss) 6 else if (f.elite) 4 else 0)
         val mat = when (f.beast.hab) { Hab.CRYPT -> "bone"; Hab.GROTTO -> "mushroom"; Hab.RIVER -> "pearl"; Hab.DEEP, Hab.BOSS -> "crystal"; Hab.ANY -> listOf("bone", "iron", "wax")[r.nextInt(3)] }
         val stuff = mapOf(mat to 1 + r.nextInt(2) + if (f.boss) 3 else 0)
         take(run, coins, items, stuff)
@@ -412,7 +457,7 @@ class Game {
     fun flee(s: GameState, node: Int, f: Foe) {
         val run = s.run ?: return
         val st = stats(s)
-        val len = max(60.0, f.stamina * (100 - st.chase) / 100.0)
+        val len = max(60.0, f.stamina * (100 - st.chase) / 100.0) * (if (run.gloom >= 4) 1.4 else 1.0)
         run.chase = Chase(f.beast.id, f.tier, len, len, 90.0, f.boss)
         run.resolved += node
     }
@@ -454,6 +499,7 @@ class Game {
 
     fun drink(s: GameState): Int {
         val run = s.run ?: return 0
+        bitter = run.gloom >= 3
         val st = stats(s)
         if (run.hp >= st.maxHp || !use(s, "potion")) return 0
         val got = min(heal(st, st.maxHp / 2), st.maxHp - run.hp)
@@ -549,7 +595,7 @@ class Game {
         // the depth stake: what is carried up alive is multiplied; lost in the dark, half stays below and no stake
         // leaving early on purpose keeps everything, but neither the stake nor the orders pay
         val leave = how == "leave"
-        val mult = if (lost || leave) 1.0 else depthMult(run.maxDepth - run.from + 1)
+        val mult = (if (lost || leave) 1.0 else depthMult(run.maxDepth - run.from + 1)) * (1 + .15 * run.gloom)
         val keep = if (lost) run.bag.filterIndexed { i, _ -> i % 2 == 0 } else run.bag
         s.gear += keep
         val coins = if (lost) run.coins / 2 else (run.coins * mult).roundToInt()
@@ -575,6 +621,7 @@ class Game {
             coins, keep.size, run.xp, how, run.trail.toList())
         s.logs.add(0, log)
         while (s.logs.size > 60) s.logs.removeAt(s.logs.size - 1)
+        if (run.gloom > 0 && !lost) gainXp(s, (run.xp * .15 * run.gloom).roundToInt(), out)
         s.run = null
         return Ev.Ended(log, lost, mult, done, keep.toList(), brought)
     }

@@ -530,6 +530,19 @@ val EXTRA_TIERS: Map<String, List<Pair<Skill, Skill>>> = mapOf(
     ),
 )
 
+/**
+ * «Мрак»: optional difficulty levels, as in roguelikes. Each level adds its rule to all the ones before it and
+ * pays 15% more coins, materials and experience. A level opens for every floor master beaten (deep camps).
+ */
+val GLOOM = listOf(
+    Tx("Существа сильнее", "Creatures are stronger") to Tx("+15% к здоровью и урону всех существ", "+15% health and damage for every creature"),
+    Tx("Сырой факел", "A damp torch") to Tx("факел сгорает на 15% быстрее", "the torch burns 15% faster"),
+    Tx("Горькие зелья", "Bitter potions") to Tx("зелья, источники и стоянки лечат вдвое меньше", "potions, springs and campsites heal half as much"),
+    Tx("Цепкие преследователи", "Dogged chasers") to Tx("погони на 40% длиннее", "chases are 40% longer"),
+    Tx("Хозяева глубин", "Masters of the deep") to Tx("элиты и хозяева этажей на треть крепче", "elites and floor masters are a third tougher"),
+    Tx("Острые ловушки", "Sharp traps") to Tx("ловушки бьют вдвое больнее и реже замечаются", "traps hurt twice as much and are spotted less often"),
+)
+
 /** Floors one can start from once their boss is beaten: 6 after the fifth floor's boss, 11 after the tenth… */
 fun campDepth(bossFloor: Int) = bossFloor + 1
 

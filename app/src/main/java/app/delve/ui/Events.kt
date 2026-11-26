@@ -246,7 +246,12 @@ private fun MeetSheet(c: AppContainer, e: Ev.Meet, ru: Boolean) {
     val theirHit = ((21 - (st.def - f.atk)).coerceIn(1, 20)) / 20f
     val expect = (myHits * theirHit * f.dmg).toInt()
     Sheet(null) {
-        Text(if (f.boss) w(ru, "ХОЗЯИН ЭТАЖА", "MASTER OF THE FLOOR") else w(ru, "В КОМНАТЕ КТО-ТО ЕСТЬ", "SOMETHING IS IN THE ROOM"), style = T.Eyebrow.copy(color = C.red))
+        Text(when {
+            f.boss -> w(ru, "ХОЗЯИН ЭТАЖА", "MASTER OF THE FLOOR")
+            f.elite -> w(ru, "★ ЭЛИТА ЭТАЖА ★", "★ ELITE OF THE FLOOR ★")
+            else -> w(ru, "В КОМНАТЕ КТО-ТО ЕСТЬ", "SOMETHING IS IN THE ROOM")
+        }, style = T.Eyebrow.copy(color = if (f.elite) C.gold else C.red))
+        if (f.elite) Text(w(ru, "Сильнее обычного, зато добыча лучше и опыта вдвое больше.", "Tougher than usual, but better loot and twice the experience."), style = T.Small.copy(color = C.gold), textAlign = TextAlign.Center)
         Pic(Art.beast(f.beast.id), Modifier.size(180.dp))
         Text(f.beast.name(ru), style = T.Title, textAlign = TextAlign.Center)
         Text(f.beast.about(ru), style = T.Body.copy(color = C.ink2), textAlign = TextAlign.Center)

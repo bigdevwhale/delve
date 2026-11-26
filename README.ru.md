@@ -3,7 +3,7 @@
 <h1 align="center">Подземелье</h1>
 
 <p align="center">Игра для прогулок: под твоим районом лежит подземелье, и его план повторяет улицы.<br>
-<a href="https://bigdevwhale.github.io/stillcraft/apps/delve/">Сайт</a> · <a href="https://github.com/bigdevwhale/delve/releases/latest/download/Delve.apk">Скачать APK</a> · <a href="README.en.md">English</a></p>
+<a href="https://bigdevwhale.github.io/stillcraft/apps/delve/">Сайт</a> · <a href="https://github.com/bigdevwhale/delve/releases/latest/download/Delve.apk">Скачать APK</a> · <a href="README.md">English</a></p>
 
 Выходишь на улицу, зажигаешь факел и идёшь гулять – а в телефоне спускаешься в подземелье. Улица в нём становится коридором, перекрёсток – залом, квартал – толщей камня. Где-то на этаже лестница вниз: чем глубже, тем опаснее и тем богаче добыча. Факел – это время прогулки: 15, 30, 45 или 60 минут.
 
