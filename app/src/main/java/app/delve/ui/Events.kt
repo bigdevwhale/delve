@@ -27,6 +27,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -362,6 +364,20 @@ fun BagSheet(c: AppContainer, onClose: () -> Unit) {
         val recall = c.game.count(s, "recall")
         Btn(w(ru, "Прочесть свиток возврата", "Read a recall scroll"), Modifier.fillMaxWidth(), BtnKind.GOLD, enabled = recall > 0, sub = w(ru, "свитков: $recall", "scrolls: $recall")) { onClose(); c.recall() }
         Gap(8.dp)
+        var ask by remember { mutableStateOf(false) }
+        if (!ask) Btn(w(ru, "Закончить вылазку", "End the expedition"), Modifier.fillMaxWidth(), BtnKind.LINE,
+            sub = w(ru, "выбраться наверх прямо отсюда", "climb out right here")) { ask = true }
+        else Column(Modifier.fillMaxWidth().paper(C.floor, ink = C.red).padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(w(ru, "Выбраться наверх?", "Climb out?"), style = T.Heading)
+            Text(w(ru, "Добыча вернётся в лагерь целиком, но ставка глубины не сработает и заказы гильдии не засчитаются. Через колодец или по свитку – выгоднее.",
+                "All the loot comes home, but the depth stake won't pay and guild orders won't count. A well or a scroll pays better."), style = T.Small, textAlign = TextAlign.Center)
+            Gap(8.dp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Btn(w(ru, "Выбраться", "Climb out"), Modifier.weight(1f), BtnKind.WAX) { onClose(); c.leave() }
+                Btn(w(ru, "Остаться", "Stay"), Modifier.weight(1f), BtnKind.LINE) { ask = false }
+            }
+        }
+        Gap(8.dp)
         Btn(w(ru, "Закрыть", "Close"), Modifier.fillMaxWidth(), BtnKind.LINE) { onClose() }
     }
 }
@@ -375,12 +391,14 @@ private fun EndedScreen(c: AppContainer, e: Ev.Ended, ru: Boolean) {
             Text(when (l.how) {
                 "dark" -> w(ru, "Факел погас", "The torch went out")
                 "faint" -> w(ru, "Силы кончились", "You fainted")
+                "leave" -> w(ru, "Выбрался наверх", "Climbed out")
                 else -> w(ru, "Снова в лагере", "Back at camp")
             }, style = T.Display, textAlign = TextAlign.Center)
             Gap(6.dp)
             Text(when (l.how) {
                 "dark" -> w(ru, "В темноте тебя вывел сквозняк. Половина добычи осталась внизу.", "A draught led you out in the dark. Half the loot stayed below.")
                 "faint" -> w(ru, "Тебя вытащил добрый кобольд. Половина добычи осталась внизу.", "A kind kobold dragged you out. Half the loot stayed below.")
+                "leave" -> w(ru, "Добыча в лагере. В следующий раз ищи колодец – там она стоит дороже.", "The loot is at camp. Next time find a well: it pays more there.")
                 else -> w(ru, "Вся добыча в лагере. Можно отдыхать и строить.", "All the loot is at camp. Time to rest and build.")
             }, style = T.Body, textAlign = TextAlign.Center)
             if (e.mult > 1) { Gap(8.dp); Text(w(ru, "Ставка глубины ×${fmt(e.mult)} сыграла!", "The depth stake ×${fmt(e.mult)} paid off!"), style = T.Strong.copy(color = C.gold)) }

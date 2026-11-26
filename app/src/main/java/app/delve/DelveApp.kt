@@ -179,12 +179,14 @@ class AppContainer(context: Context) {
     /** News that needs no choice: it goes to the journal and a toast, not a sheet. */
     private fun quiet(e: Ev) = e is Ev.News || e is Ev.LevelUp || (e is Ev.Fought && e.won)
 
+    private fun joined(a: String, b: String) = if (a.endsWith("!") || a.endsWith("…")) "$a $b" else "$a. $b"
+
     private fun push(all: List<Ev>) {
         if (all.isEmpty()) return
         val run = state?.run
         for (e in all.filter(::quiet)) {
             when (e) {
-                is Ev.News -> run?.note(Tx(e.title.ru + ". " + e.text.ru, e.title.en + ". " + e.text.en))
+                is Ev.News -> run?.note(Tx(joined(e.title.ru, e.text.ru), joined(e.title.en, e.text.en)))
                 is Ev.LevelUp -> run?.note(Tx("Новый уровень: ${e.level}!", "New level: ${e.level}!"))
                 is Ev.Fought -> run?.note(Tx("${e.foe.beast.name.ru} отстал. +${e.coins} монет", "${e.foe.beast.name.en} gave up. +${e.coins} coins"))
                 else -> Unit
@@ -376,6 +378,8 @@ class AppContainer(context: Context) {
     }
 
     fun goUp() { pop(); finish("up") }
+    /** The walk is over in real life: back to camp from anywhere. */
+    fun leave() { finish("leave") }
     fun recall(): Boolean { val s = state ?: return false; if (!game.use(s, "recall")) return false; finish("up"); return true }
     fun drink(): Int { val s = state ?: return 0; val g = synchronized(this) { game.drink(s) }; changed(); return g }
     fun smoke(): Boolean { val s = state ?: return false; val ok = synchronized(this) { game.smoke(s) }; changed(); return ok }

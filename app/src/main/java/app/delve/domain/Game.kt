@@ -538,7 +538,9 @@ class Game {
         val run = s.run!!
         val lost = how == "dark" || how == "faint"
         // the depth stake: what is carried up alive is multiplied; lost in the dark, half stays below and no stake
-        val mult = if (lost) 1.0 else depthMult(run.maxDepth)
+        // leaving early on purpose keeps everything, but neither the stake nor the orders pay
+        val leave = how == "leave"
+        val mult = if (lost || leave) 1.0 else depthMult(run.maxDepth)
         val keep = if (lost) run.bag.filterIndexed { i, _ -> i % 2 == 0 } else run.bag
         s.gear += keep
         val coins = if (lost) run.coins / 2 else (run.coins * mult).roundToInt()
@@ -549,7 +551,7 @@ class Game {
         }
         s.deepest = max(s.deepest, run.maxDepth)
         run.prog["depth"] = run.maxDepth
-        val done = if (lost) emptyList() else s.taken.filter { progress(run, it) >= it.n }
+        val done = if (lost || leave) emptyList() else s.taken.filter { progress(run, it) >= it.n }
         val out = ArrayList<Ev>()
         for (c in done) {
             s.coins += c.coins

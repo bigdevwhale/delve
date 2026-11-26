@@ -135,6 +135,7 @@ fun ChronicleScreen(c: AppContainer) {
                     Text(when (l.how) {
                         "dark" -> w(ru, "факел погас", "the torch went out")
                         "faint" -> w(ru, "без сил", "fainted")
+                        "leave" -> w(ru, "выбрался раньше: ${l.coins} мон., вещей ${l.items}", "climbed out early: ${l.coins} coins, ${l.items} things")
                         else -> w(ru, "вернулся с добычей: ${l.coins} мон., вещей ${l.items}", "came back with ${l.coins} coins, ${l.items} things")
                     }, style = T.Small.copy(color = if (l.how == "up") C.green else C.red))
                 }
