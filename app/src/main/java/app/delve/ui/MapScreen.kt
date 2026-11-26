@@ -140,14 +140,16 @@ fun DungeonScreen(c: AppContainer, onBag: () -> Unit) {
                     }
                 }
                 .pointerInput(Unit) {
-                    detectTapGestures(onLongPress = { p ->
-                        // demo and debug builds: a long press walks the hero there
-                        if (BuildConfig.DEMO || BuildConfig.DEBUG) {
-                            val mx = center.x + (p.x - size.width / 2) / (zoom * density)
-                            val my = center.y + (p.y - size.height / 2) / (zoom * density)
-                            c.walkTo(mx, my)
-                        }
-                    })
+                    fun go(p: Offset) {
+                        val mx = center.x + (p.x - size.width / 2) / (zoom * density)
+                        val my = center.y + (p.y - size.height / 2) / (zoom * density)
+                        c.walkTo(mx, my)
+                    }
+                    // the demo: a tap walks the hero to the hall nearest to it; debug builds: a long press
+                    detectTapGestures(
+                        onTap = { p -> if (BuildConfig.DEMO) go(p) },
+                        onLongPress = { p -> if (BuildConfig.DEMO || BuildConfig.DEBUG) go(p) },
+                    )
                 }
             Canvas(Modifier.fillMaxSize().then(gestures)) {
                 drawIntoCanvas { cv ->
@@ -180,12 +182,13 @@ fun DungeonScreen(c: AppContainer, onBag: () -> Unit) {
                     for (g in goals) {
                         val nd = f.g.nodes[g]
                         val q = floatArrayOf(nd.x, nd.y); m.mapPoints(q)
-                        val inset = 34 * density
-                        val top = 200 * density; val bottom = size.height - 330 * density
-                        if (q[0] in inset..size.width - inset && q[1] in top..bottom) continue
+                        // the chips keep to the edges, clear of the zoom buttons on the right and the room card below
+                        val left = 34 * density; val right = size.width - 84 * density
+                        val top = 200 * density; val bottom = size.height - 240 * density
+                        if (q[0] in left..right && q[1] in top..bottom) continue
                         val dx = q[0] - pt[0]; val dy = q[1] - pt[1]
                         var k = 1f
-                        if (dx != 0f) k = minOf(k, ((if (dx > 0) size.width - inset else inset) - pt[0]) / dx)
+                        if (dx != 0f) k = minOf(k, ((if (dx > 0) right else left) - pt[0]) / dx)
                         if (dy != 0f) k = minOf(k, ((if (dy > 0) bottom else top) - pt[1]) / dy)
                         val ex = pt[0] + dx * k; val ey = pt[1] + dy * k
                         val metres = (kotlin.math.hypot(nd.x - pos.x, nd.y - pos.y) * 1.6f).toInt()
@@ -353,7 +356,8 @@ private fun RoomCard(c: AppContainer, f: Floor, run: Run, ru: Boolean, @Suppress
     val tappable = kind in setOf(RoomKind.DOWN, RoomKind.UP, RoomKind.MERCHANT) || (kind == RoomKind.BOSS && done) || (kind == RoomKind.START && run.depth == 1)
     Row(Modifier.fillMaxWidth().paper(C.floor).clickable(enabled = tappable) { c.reopen() }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)).background(C.paper).border(1.dp, C.ink.copy(alpha = .4f), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-            Pic(Art.room(kind.art), Modifier.size(40.dp), tint = androidx.compose.ui.graphics.ColorFilter.tint(C.ink))
+            if (kind == RoomKind.EMPTY) Pic(Art.item(21), Modifier.size(40.dp))
+            else Pic(Art.room(kind.art), Modifier.size(40.dp), tint = androidx.compose.ui.graphics.ColorFilter.tint(C.ink))
         }
         HGap(12.dp)
         Column(Modifier.weight(1f)) {

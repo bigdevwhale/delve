@@ -121,7 +121,7 @@ fun ToastLayer(c: AppContainer, modifier: Modifier = Modifier) {
         val ev = e ?: return@AnimatedVisibility
         Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).paper(C.floor.copy(alpha = .97f)).clickable { c.toastDone(ev) }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             when (ev) {
-                is Ev.News -> Pic(Art.room(ev.kind.art), Modifier.size(40.dp), tint = ColorFilter.tint(C.ink))
+                is Ev.News -> if (ev.kind == app.delve.domain.RoomKind.EMPTY) Pic(Art.item(21), Modifier.size(40.dp)) else Pic(Art.room(ev.kind.art), Modifier.size(40.dp), tint = ColorFilter.tint(C.ink))
                 is Ev.LevelUp -> Pic(Art.item(45), Modifier.size(40.dp))
                 is Ev.Fought -> Pic(Art.beast(ev.foe.beast.id), Modifier.size(44.dp))
                 else -> Box(Modifier.size(40.dp))

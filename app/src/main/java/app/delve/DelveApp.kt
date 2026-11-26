@@ -360,6 +360,8 @@ class AppContainer(context: Context) {
         }
     }
 
+    private var walkJob: kotlinx.coroutines.Job? = null
+
     /** Debug and demo: walks the hero in small steps to a map point, as the GPS would. */
     fun walkTo(x: Float, y: Float) {
         val d = district ?: return
@@ -382,7 +384,9 @@ class AppContainer(context: Context) {
             }
         }
         if (pts.isEmpty()) { pts += from; pts += Geo(d.lat(y), d.lon(x)) }
-        scope.launch {
+        // a new tap changes course: the walk in progress stops where it is
+        walkJob?.cancel()
+        walkJob = scope.launch {
             var prev = from
             for (to in pts) {
                 val n = maxOf(1, (prev.metres(to) / 8).toInt())
@@ -390,7 +394,7 @@ class AppContainer(context: Context) {
                     val k = i.toDouble() / n
                     lastFixAt = System.currentTimeMillis() - 4000
                     fix(Geo(prev.lat + (to.lat - prev.lat) * k, prev.lon + (to.lon - prev.lon) * k), 5f)
-                    kotlinx.coroutines.delay(25)
+                    kotlinx.coroutines.delay(40)
                 }
                 prev = to
             }
