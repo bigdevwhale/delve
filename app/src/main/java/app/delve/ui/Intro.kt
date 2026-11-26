@@ -159,7 +159,7 @@ private fun ColumnScope.SceneTown(ru: Boolean, next: () -> Unit) {
         w(ru, "Каждую улицу. Каждый поворот.", "Every street. Every corner."),
         w(ru, "Но под мостовой лежит другой город.", "But under the cobbles lies another town."),
     ))
-    Lines(listOf(w(ru, "Тёмный, старый и очень терпеливый.", "Dark, old and very patient.")), start = 3200, style = T.Note.copy(color = Warm))
+    Lines(listOf(w(ru, "Он старше мостовой – и давно тебя ждёт.", "Older than the cobbles – and it has been waiting for you.")), start = 3200, style = T.Note.copy(color = Warm))
     Next(w(ru, "Спуститься", "Go down"), 3800, next)
     Gap(14.dp)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
