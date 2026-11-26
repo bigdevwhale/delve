@@ -1,57 +1,48 @@
-<p align="center"><img src="docs/logo.png" width="128" alt="Подземелье"></p>
+<p align="center"><img src="docs/logo.png" width="128" alt="Delve"></p>
 
-<h1 align="center">Подземелье</h1>
+<h1 align="center">Delve</h1>
 
-<p align="center">Игра для прогулок: под твоим районом лежит подземелье, и его план повторяет улицы.<br>
-<a href="https://bigdevwhale.github.io/stillcraft/apps/delve/">Сайт</a> · <a href="https://github.com/bigdevwhale/delve/releases/latest/download/Delve.apk">Скачать APK</a> · <a href="README.en.md">English</a></p>
+<p align="center">A walking game: a dungeon lies under your district, and its plan follows your streets.<br>
+<a href="https://bigdevwhale.github.io/stillcraft/apps/delve/">Website</a> · <a href="https://github.com/bigdevwhale/delve/releases/latest/download/Delve.apk">Download APK</a> · <a href="README.md">Русский</a></p>
 
-Выходишь на улицу, зажигаешь факел и идёшь гулять – а в телефоне спускаешься в подземелье. Улица в нём становится коридором, перекрёсток – залом, квартал – толщей камня. Где-то на этаже лестница вниз: чем глубже, тем опаснее и тем богаче добыча. Факел – это время прогулки: 15, 30, 45 или 60 минут.
-
-<p align="center">
-<img src="docs/screenshots/ru/2-map.png" width="200" alt="Карта этажа">
-<img src="docs/screenshots/ru/3-meet.png" width="200" alt="Встреча">
-<img src="docs/screenshots/ru/1-camp.png" width="200" alt="Лагерь">
-<img src="docs/screenshots/ru/9-bestiary.png" width="200" alt="Бестиарий">
-</p>
-
-## Что внутри
-
-- **Подземелье из твоих улиц.** Карта берётся из OpenStreetMap и рисуется как старинная карта: чернила, штриховка камня, голубая сетка. Видно только то, что освещает факел, а пройденные коридоры остаются на карте.
-- **Город наверху меняет подземелье.** Под церковью или кладбищем – склеп, под фонтаном – источник, под парком – грибной грот, у воды – подземная река, под магазином – торговец.
-- **Погоня шагами.** От чудовища не обязательно отбиваться: пройди пару сотен метров, и оно отстанет. А можно сразиться – бой короткий, в два-три удара, главное вовремя защититься, когда существо замахивается.
-- **Телефон можно убрать в карман.** У зала, при погоне и у лестницы он вздрогнет, а мелкие находки соберутся сами и попадут в журнал вылазки.
-- **Ставка глубины.** Каждый этаж прибавляет четверть к монетам и материалам – если подняться живым через колодец или по свитку. Погас факел – половина добычи останется внизу.
-- **Стоянки на глубине.** Победи хозяина пятого, десятого или пятнадцатого этажа, и следующий спуск можно начать со стоянки под ним.
-- **Развитие надолго.** Четыре класса, двадцать уровней и пары умений на выбор; снаряжение с редкостью и свойствами; шесть построек лагеря по десять уровней; заказы гильдии на каждый день.
-- **80 существ** в бестиарии. Некоторых можно приручить лакомством – и они пойдут с тобой.
-- **Летопись** хранит каждую вылазку с маршрутом, глубиной и добычей. Русский и английский.
+Step outside, light the torch and go for a walk – while on the phone you go down into a dungeon. A street becomes a corridor, a crossing a hall, a block solid rock. Somewhere on each floor are the stairs down: the deeper, the more danger and the richer the loot. The torch is your walk's length: 15, 30, 45 or 60 minutes.
 
 <p align="center">
-<img src="docs/screenshots/ru/5-bag.png" width="200" alt="Сумка">
-<img src="docs/screenshots/ru/6-hero.png" width="200" alt="Герой">
-<img src="docs/screenshots/ru/7-skills.png" width="200" alt="Умения">
-<img src="docs/screenshots/ru/8-chronicle.png" width="200" alt="Летопись">
+<img src="docs/screenshots/ru/2-map.png" width="200" alt="Floor map">
+<img src="docs/screenshots/ru/3-meet.png" width="200" alt="A meeting">
+<img src="docs/screenshots/ru/1-camp.png" width="200" alt="Camp">
+<img src="docs/screenshots/ru/9-bestiary.png" width="200" alt="Bestiary">
 </p>
 
-## Установка
+## What's inside
 
-Скачай [Delve.apk](https://github.com/bigdevwhale/delve/releases/latest/download/Delve.apk) на телефон с Android 9 или новее, открой файл и разреши установку, когда Android спросит.
+- **A dungeon made of your streets,** from OpenStreetMap, drawn like an old map: ink walls, hatched rock, a blue grid. Only what your torch lights is shown, and walked corridors stay on the map.
+- **The town above shapes the dungeon.** A church or graveyard above is a crypt below, a fountain a spring, a park a mushroom grotto, water an underground river, a shop a merchant.
+- **Chases by walking.** You don't have to fight a creature: walk a couple of hundred metres and it gives up. Or fight it: two or three blows, and guard when it winds up.
+- **Pocket-friendly.** The phone buzzes at a hall, in a chase and at the stairs; small finds are picked up by themselves and go into the expedition log.
+- **The depth stake.** Each floor adds a quarter to coins and materials – if you come up alive through a well or by scroll. If the torch dies, half the loot stays below.
+- **Deep camps.** Beat the master of the fifth, tenth or fifteenth floor and the next descent can start from a camp below it.
+- **Long progression.** Four classes, twenty levels with skill pairs to choose from; gear with rarities and affixes; six camp buildings with ten levels each; daily guild orders.
+- **80 creatures** in the bestiary, some of which can be tamed with a treat and follow you.
+- **A chronicle** of every expedition with its route, depth and loot. English and Russian.
 
-При первом запуске разреши геолокацию: из неё строится подземелье и по ней идёт герой. На Xiaomi, Huawei и некоторых других телефонах разреши приложению работать в фоне, иначе вылазка может прерваться, пока телефон в кармане.
+## Install
 
-## Конфиденциальность
+Download [Delve.apk](https://github.com/bigdevwhale/delve/releases/latest/download/Delve.apk) on an Android 9+ phone, open it and allow the install when Android asks. Allow location on first start: the dungeon is built from it and the hero follows it. On Xiaomi, Huawei and some other phones, let the app run in the background, or an expedition may stop while the phone is in your pocket.
 
-Без рекламы, аккаунтов и аналитики. Где ты гуляешь, остаётся только на телефоне. В сеть уходят лишь границы района, чтобы скачать карту улиц, и округлённые координаты для прогноза погоды. Подробнее – в [PRIVACY.md](PRIVACY.md).
+## Privacy
 
-## Сборка
+No ads, accounts or analytics. Where you walk stays on your phone. Only the district's bounds go out (to download the street map) and rounded coordinates for the weather. See [PRIVACY.md](PRIVACY.md).
 
-Нужны JDK 17+ (подойдёт JBR из Android Studio) и Android SDK.
+## Build
+
+JDK 17+ (Android Studio's JBR works) and the Android SDK.
 
 ```
-./gradlew assembleDebug                 # app.delve.dev: героя можно водить тапами по карте
-./gradlew assembleDebug -Pdemo          # app.delve.demo: Петроградская сторона, без GPS
-./gradlew assembleDebug -Pdemo -Pshots  # app.delve.shots: прокачанный герой для скриншотов
+./gradlew assembleDebug                 # app.delve.dev: tap the map to walk the hero
+./gradlew assembleDebug -Pdemo          # app.delve.demo: Petrogradka, no GPS
+./gradlew assembleDebug -Pdemo -Pshots  # app.delve.shots: a levelled hero for screenshots
 ./gradlew testDebugUnitTest
 ```
 
-Арт нарисован с помощью Codex: `python tools/gen_art.py`, затем `python tools/cut.py`. Карта © участники OpenStreetMap, погода – MET Norway.
+Art made with Codex: `python tools/gen_art.py`, then `python tools/cut.py`. Map © OpenStreetMap contributors, weather by MET Norway.
